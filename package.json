@@ -1,0 +1,22 @@
+{
+  "name": "akord-explorer-api",
+  "version": "1.0.0",
+  "description": "A decentralized API to read Akord content directly from the permaweb",
+  "main": "lib/api.js",
+  "author": "Akord Team",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "clean": "rm -rf ./lib"
+  },
+  "dependencies": {
+    "@akord/akord-js": "4.1.0",
+    "dotenv": "^16.0.1",
+    "graphql": "15.7.0",
+    "graphql-request": "4.3.0",
+    "warp-contracts": "1.2.13"
+  },
+  "devDependencies": {
+    "typescript": "^3.8.3"
+  }
+}
