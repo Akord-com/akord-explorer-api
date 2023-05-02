@@ -5,6 +5,6 @@ A decentralized implementation of [Akord API](https://github.com/Akord-com/akord
 ## Usage
 ```javascript
 const wallet = await AkordWallet.importFromBackupPhrase("your backup phrase here");
-const akord = await Akord.init(wallet, { api: new ExplorerApi() });
+const akord = await Akord.init(wallet, { api: new ExplorerApi(await wallet.getAddress()) });
 const vaults = await akord.vault.listAll();
 ```

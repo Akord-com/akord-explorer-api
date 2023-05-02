@@ -4,7 +4,7 @@ const executeQuery = async function (query: any, variables: any) {
   const client = new GraphQLClient("https://arweave.net/graphql", { headers: {} })
   const result = await client.request(query, variables);
   let nextToken = undefined;
-  const hasNextPage = result?.transactions.pageInfo.hasNextPage;
+  const hasNextPage = result?.transactions?.pageInfo?.hasNextPage;
   if (hasNextPage) {
     nextToken = result?.transactions?.edges?.[result.transactions.edges.length - 1].cursor;
   }

@@ -11,6 +11,10 @@ query transactions($vaultId: String!) {
         {
           name: "Contract",
           values: [$vaultId]
+        },
+        {
+          name: "Protocol-Name",
+          values: ["Akord", "Akord-Test"]
         }
       ]
   ) {
@@ -34,6 +38,10 @@ query membershipsByAddress($address: String!) {
         {
           name: "Member-Address",
           values: [$address]
+        },
+        {
+          name: "Protocol-Name",
+          values: ["Akord", "Akord-Test"]
         }
       ]
   ) {
@@ -61,6 +69,10 @@ query nodesByVaultIdAndType($vaultId: String!, $objectType: String!) {
         {
           name: "Command",
           values: ["Node-Create"]
+        },
+        {
+          name: "Protocol-Name",
+          values: ["Akord", "Akord-Test"]
         }
       ]
   ) {
