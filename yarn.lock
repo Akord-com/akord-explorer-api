@@ -10,10 +10,10 @@
     "@akord/crypto" "0.10.0"
     amazon-cognito-identity-js "6.1.2"
 
-"@akord/akord-js@4.1.0":
-  version "4.1.0"
-  resolved "https://registry.yarnpkg.com/@akord/akord-js/-/akord-js-4.1.0.tgz#da7877c91a897b0cc45003045efaa297f4a2217b"
-  integrity sha512-Y1gItlKIQV2H1/faoacEMdpzmQD56jWGE4Wk3slo4GrBFPFiunXcwZG/C3BsvjjVJnPHcLkkUppD4y+C6XcSBw==
+"@akord/akord-js@4.0.0-alpha.1":
+  version "4.0.0-alpha.1"
+  resolved "https://registry.yarnpkg.com/@akord/akord-js/-/akord-js-4.0.0-alpha.1.tgz#98523113bd5fff98ddd81d86253305bd6abf222d"
+  integrity sha512-m3A2yvqQb+lw+hCGKzd94doF6rsO8WoIYH4IFTOAJqkRXhDqosXSgd8dVkrPgjJuVEjld7cdZwrOp9ezXV0quA==
   dependencies:
     "@akord/akord-auth" "0.25.1"
     "@akord/crypto" "0.10.6"
@@ -1482,9 +1482,9 @@ run-parallel-limit@^1.1.0:
     queue-microtask "^1.2.2"
 
 rxjs@^7.5.6:
-  version "7.8.0"
-  resolved "https://registry.yarnpkg.com/rxjs/-/rxjs-7.8.0.tgz#90a938862a82888ff4c7359811a595e14e1e09a4"
-  integrity sha512-F2+gxDshqmIub1KdvZkaEfGDwLNpPvk9Fs6LD/MyQxNgMds/WH9OdDDXOmxUZpME+iSK3rQCctkL0DYyytUqMg==
+  version "7.8.1"
+  resolved "https://registry.yarnpkg.com/rxjs/-/rxjs-7.8.1.tgz#6f6f3d99ea8044291efd92e7c7fcf562c4057543"
+  integrity sha512-AA3TVj+0A2iuIoQkWEK/tqFjBq2j+6PO6Y0zJcvzLAFhEFIO3HL0vls9hWLncZbAAbK0mar7oZ4V079I/qPMxg==
   dependencies:
     tslib "^2.1.0"
 

@@ -10,7 +10,7 @@ import { getTxData, getTxMetadata } from "@akord/akord-js/lib/arweave";
 import { membershipsQuery, timelineQuery } from "./graphql/queries";
 import { executeQuery, paginatedQuery } from "./graphql/client";
 import { WarpFactory, LoggerFactory, DEFAULT_LEVEL_DB_LOCATION, Contract } from "warp-contracts";
-import axios, { AxiosRequestConfig } from "axios";
+import { EncryptionMetadata } from "@akord/akord-js/lib/core";
 
 // import Arweave from 'arweave';
 // // Set up Arweave client
@@ -54,7 +54,7 @@ export default class ExplorerApi extends Api {
   }
 
   public async getNode<T>(id: string, type: NodeType, vaultId?: string): Promise<T> {
-    const vault = await this.getVault(vaultId);
+    const vault = await this.getVault(vaultId, { withNodes: true });
     const node = vault.nodes.filter(node => node.id === id)[0];
     const dataTx = node.data?.[node.data.length - 1];
     const state = await this.getNodeState(dataTx);
@@ -62,28 +62,34 @@ export default class ExplorerApi extends Api {
   };
 
   public async getMembership(id: string, vaultId?: string): Promise<Membership> {
-    const vault = await this.getVault(vaultId);
+    const vault = await this.getVault(vaultId, { withMemberships: true });
     const membership = vault.memberships.filter(membership => membership.id === id)[0];
     const dataTx = membership.data?.[membership.data.length - 1];
     const state = await this.getNodeState(dataTx);
     return { ...membership, ...state };
   };
 
-  public async getVault(id: string, options?: VaultApiGetOptions): Promise<Vault> {
-    const contractObject = getContract(id);
-    let vault = (await contractObject.readState()).cachedValue.state;
+  public async getVault(id: string, options?: VaultApiGetOptions & { withMemberships?: boolean }): Promise<Vault> {
+    const contract = getContract(id);
+    let vault = (await contract.readState()).cachedValue.state;
     const dataTx = vault.data[vault.data.length - 1];
     const state = await this.getNodeState(dataTx);
     vault = { ...vault, ...state };
-    if (options.deep) {
+    if (options?.deep || options?.withMemberships) {
       await this.downloadMemberships(vault);
+    } else {
+      delete vault.memberships;
+    }
+    if (options?.deep || options?.withNodes) {
       await this.downloadNodes(vault);
+    } else {
+      delete vault.nodes;
     }
     return vault;
   };
 
   public async getMembershipKeys(vaultId: string): Promise<MembershipKeys> {
-    const vault = await this.getVault(vaultId);
+    const vault = await this.getVault(vaultId, { withMemberships: true });
     const membership = vault.memberships.filter(membership => membership.address === this.address)[0];
     const dataTx = membership.data?.[membership.data.length - 1];
     const state = await this.getNodeState(dataTx);
@@ -91,25 +97,12 @@ export default class ExplorerApi extends Api {
   };
 
   public async getNodeState(stateId: string): Promise<any> {
-    const config = {
-      method: "get",
-      url: ARWEAVE_URL + stateId,
-      responseType: "json"
-    } as AxiosRequestConfig;
     try {
-      const response = await axios(config);
-      if (response.status == 200 || response.status == 202) {
-        return response.data;
-      } else if (response.status === 404) {
-        return {};
-      } else {
-        throw new Error(JSON.stringify(response));
-      }
+      return await getTxData(stateId, "json");
     } catch (error) {
-      if (error.response?.status === 404) {
+      if (error === 404 || error?.response?.status === 404) {
         return {};
       }
-      throw new Error(error.response?.status);
     }
   };
 
@@ -143,7 +136,7 @@ export default class ExplorerApi extends Api {
   };
 
   public async getNodesByVaultId<T>(vaultId: string, type: NodeType, options: ListOptions): Promise<Paginated<T>> {
-    const vault = await this.getVault(vaultId);
+    const vault = await this.getVault(vaultId, { withNodes: true });
     const results = await Promise.all(vault.nodes
       .filter((node: NodeLike) => node.type === type)
       .map(async (node: NodeLike) => {
@@ -155,7 +148,7 @@ export default class ExplorerApi extends Api {
   };
 
   public async getMembershipsByVaultId(vaultId: string, options: ListOptions): Promise<Paginated<Membership>> {
-    const vault = await this.getVault(vaultId);
+    const vault = await this.getVault(vaultId, { withMemberships: true });
     const results = await Promise.all(vault.memberships
       .map(async (membership: Membership) => {
         const dataTx = membership.data[membership.data.length - 1];
@@ -169,16 +162,18 @@ export default class ExplorerApi extends Api {
     return await paginatedQuery(timelineQuery, { vaultId });
   }
 
-  public async downloadFile(id: string): Promise<{ fileData: ArrayBuffer, headers: any }> {
-    const file = await getTxData(id);
-    const metadata = await getTxMetadata(id);
-    const iv = metadata.tags.find((tag: Tag) => tag.name === "Initialization-Vector")?.value;
-    const encryptedKey = metadata.tags.find((tag: Tag) => tag.name === "Encrypted-Key")?.value;
-    const headers = {
-      "x-amz-meta-iv": iv,
-      "x-amz-meta-encryptedkey": encryptedKey
+  public async downloadFile(id: string): Promise<{ fileData: ArrayBuffer, metadata: EncryptionMetadata }> {
+    const fileData = await getTxData(id);
+    const txMetadata = await getTxMetadata(id);
+    const metadata = {
+      iv: txMetadata.tags.find((tag: Tag) => tag.name === "Initialization-Vector")?.value,
+      encryptedKey: txMetadata.tags.find((tag: Tag) => tag.name === "Encrypted-Key")?.value
     }
-    return { fileData: file, headers };
+    return { fileData, metadata };
+  };
+
+  public async getUser(): Promise<any> {
+    return null;
   };
 
   // The explorer API is read-only, hence the following methods are not implemented
@@ -208,10 +203,6 @@ export default class ExplorerApi extends Api {
   }
 
   public async getUserPublicData(): Promise<any> {
-    throw new Error("Method not implemented.");
-  };
-
-  public async getUser(): Promise<any> {
     throw new Error("Method not implemented.");
   };
 
