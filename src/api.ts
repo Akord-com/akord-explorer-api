@@ -97,10 +97,11 @@ export default class ExplorerApi extends Api {
 
   public async getMembershipKeys(vaultId: string): Promise<MembershipKeys> {
     const vault = await this.getVault(vaultId, { withMemberships: true });
+    if (vault.public) {
+      return { isEncrypted: false, keys: [] };
+    }
     const membership = vault.memberships.filter(membership => membership.address === this.address)[0];
-    const dataTx = this.getDataTx(membership);
-    const state = await this.getNodeState(dataTx);
-    return { isEncrypted: true, keys: state.keys };
+    return { isEncrypted: true, keys: membership.keys };
   };
 
   public async getNodeState(stateId: string): Promise<any> {
@@ -137,9 +138,11 @@ export default class ExplorerApi extends Api {
     const vaults = await Promise.all(items
       .map(async (item: TxNode) => {
         const vaultId = item.tags.filter((tag: Tag) => tag.name === "Contract")[0]?.value;
-        const vault = await this.getVault(vaultId);
+        const vault = await this.getVault(vaultId, { withMemberships: true });
+        const membership = vault.memberships.filter(membership => membership.address === this.address)[0];
+        vault.keys = membership.keys;
         return vault;
-      })) as Array<Vault>;
+      })) as Array<any>;
     return { items: vaults, nextToken: nextPage };
   };
 
