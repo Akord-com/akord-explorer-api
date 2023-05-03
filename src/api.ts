@@ -58,7 +58,7 @@ export default class ExplorerApi extends Api {
     if (!vaultId) {
       vaultId = await this.getVaultIdForNode(id);
     }
-    const vault = await this.getVault(vaultId, { withNodes: true });
+    const vault = await this.getVault(vaultId);
     const node = vault.nodes.filter(node => node.id === id)[0];
     const dataTx = this.getDataTx(node);
     const state = await this.getNodeState(dataTx);
@@ -69,14 +69,14 @@ export default class ExplorerApi extends Api {
     if (!vaultId) {
       vaultId = await this.getVaultIdForMembership(id);
     }
-    const vault = await this.getVault(vaultId, { withMemberships: true });
+    const vault = await this.getVault(vaultId);
     const membership = vault.memberships.filter(membership => membership.id === id)[0];
     const dataTx = this.getDataTx(membership);
     const state = await this.getNodeState(dataTx);
     return { ...membership, ...state, vaultId };
   };
 
-  public async getVault(id: string, options?: VaultApiGetOptions & { withMemberships?: boolean }): Promise<Vault> {
+  public async getVault(id: string, options?: VaultGetOptions): Promise<Vault> {
     const contract = getContract(id);
     let vault = (await contract.readState()).cachedValue.state;
     const dataTx = this.getDataTx(vault);
@@ -84,13 +84,18 @@ export default class ExplorerApi extends Api {
     vault = { ...vault, ...state };
     if (options?.deep || options?.withMemberships) {
       await this.downloadMemberships(vault);
-    } else {
-      delete vault.memberships;
+    }
+    if (options?.withStacks) {
+      await this.downloadNodesByType(vault, "Stack");
+    }
+    if (options?.withFolders) {
+      await this.downloadNodesByType(vault, "Folder");
+    }
+    if (options?.withMemos) {
+      await this.downloadNodesByType(vault, "Memo");
     }
     if (options?.deep || options?.withNodes) {
       await this.downloadNodes(vault);
-    } else {
-      delete vault.nodes;
     }
     return vault;
   };
@@ -147,26 +152,13 @@ export default class ExplorerApi extends Api {
   };
 
   public async getNodesByVaultId<T>(vaultId: string, type: NodeType, options: ListOptions): Promise<Paginated<T>> {
-    const vault = await this.getVault(vaultId, { withNodes: true });
-    const results = await Promise.all(vault.nodes
-      .filter((node: NodeLike) => node.type === type)
-      .map(async (node: NodeLike) => {
-        const dataTx = this.getDataTx(node);
-        const state = await this.getNodeState(dataTx);
-        return { ...node, ...state };
-      }));
-    return { items: results as Array<T>, nextToken: "null" };
+    const vault = await this.getVault(vaultId, { ["with" + type + "s"]: true });
+    return { items: vault[type.toLowerCase() + "s"] as Array<T>, nextToken: "null" };
   };
 
   public async getMembershipsByVaultId(vaultId: string, options: ListOptions): Promise<Paginated<Membership>> {
     const vault = await this.getVault(vaultId, { withMemberships: true });
-    const results = await Promise.all(vault.memberships
-      .map(async (membership: Membership) => {
-        const dataTx = this.getDataTx(membership);
-        const state = await this.getNodeState(dataTx);
-        return { ...membership, ...state };
-      }));
-    return { items: results, nextToken: "null" };
+    return { items: vault.memberships, nextToken: "null" };
   };
 
   public async getTransactions(vaultId: string): Promise<Array<Transaction>> {
@@ -258,6 +250,22 @@ export default class ExplorerApi extends Api {
       }));
   };
 
+  private async downloadNodesByType(vault: Vault, type: NodeType) {
+    vault.folders = [];
+    vault.stacks = [];
+    vault.memos = [];
+    vault.nodes = await Promise.all(vault.nodes
+      .map(async (node: NodeLike) => {
+        if (node.type === type) {
+          const dataTx = this.getDataTx(node);
+          const state = await this.getNodeState(dataTx);
+          vault[node.type.toLowerCase() + "s"].push({ ...node, ...state, vaultId: vault.id });
+          return { ...node, ...state, vaultId: vault.id };
+        }
+        return node;
+      }));
+  };
+
   private async downloadNodes(vault: Vault) {
     vault.folders = [];
     vault.stacks = [];
@@ -266,7 +274,7 @@ export default class ExplorerApi extends Api {
       .map(async (node: NodeLike) => {
         const dataTx = this.getDataTx(node);
         const state = await this.getNodeState(dataTx);
-        vault[node.type.toLowerCase() + "s"].push(node);
+        vault[node.type.toLowerCase() + "s"].push({ ...node, ...state, vaultId: vault.id });
         return { ...node, ...state, vaultId: vault.id };
       }));
   };
@@ -291,6 +299,15 @@ export default class ExplorerApi extends Api {
     return vaultId;
   };
 }
+
+export type VaultGetOptions =
+  VaultApiGetOptions &
+  {
+    withMemberships?: boolean,
+    withFolders?: boolean,
+    withStacks?: boolean,
+    withMemos?: boolean
+  }
 
 export {
   ExplorerApi
