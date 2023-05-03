@@ -75,8 +75,78 @@ query nodesByVaultIdAndType($vaultId: String!, $objectType: String!) {
           values: [$objectType]
         },
         {
-          name: "Command",
-          values: ["Node-Create"]
+          name:"Function-Name"
+          values: ["node:create"]
+        },
+        {
+          name: "Protocol-Name",
+          values: ["Akord", "Akord-Test"]
+        }
+      ]
+  ) {
+      edges {
+          cursor
+          node {
+              id
+              tags {
+                name
+                value
+              }
+          }
+      }
+      pageInfo {
+        hasNextPage
+      }
+  }
+}
+`;
+
+const nodeVaultIdQuery = gql`
+query nodesById($id: String!) {
+  transactions(
+      tags: [
+        {
+          name: "Node-Id",
+          values: [$id]
+        },
+        {
+          name:"Function-Name"
+          values: ["node:create"]
+        },
+        {
+          name: "Protocol-Name",
+          values: ["Akord", "Akord-Test"]
+        }
+      ]
+  ) {
+      edges {
+          cursor
+          node {
+              id
+              tags {
+                name
+                value
+              }
+          }
+      }
+      pageInfo {
+        hasNextPage
+      }
+  }
+}
+`;
+
+const membershipVaultIdQuery = gql`
+query membershipsById($id: String!) {
+  transactions(
+      tags: [
+        {
+          name: "Membership-Id",
+          values: [$id]
+        },
+        {
+          name: "Function-Name",
+          values: ["membership:invite", "vault:init"]
         },
         {
           name: "Protocol-Name",
@@ -104,5 +174,7 @@ query nodesByVaultIdAndType($vaultId: String!, $objectType: String!) {
 export {
   timelineQuery,
   membershipsQuery,
-  nodesQuery
+  nodesQuery,
+  nodeVaultIdQuery,
+  membershipVaultIdQuery
 }
