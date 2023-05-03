@@ -19,6 +19,7 @@ query transactions($vaultId: String!) {
       ]
   ) {
       edges {
+          cursor
           node {
               id
               tags {
@@ -26,6 +27,9 @@ query transactions($vaultId: String!) {
                 value
               }
           }
+      }
+      pageInfo {
+        hasNextPage
       }
   }
 }
@@ -46,6 +50,7 @@ query membershipsByAddress($address: String!) {
       ]
   ) {
       edges {
+          cursor
           node {
               id
               tags {
@@ -53,6 +58,9 @@ query membershipsByAddress($address: String!) {
                 value
               }
           }
+      }
+      pageInfo {
+        hasNextPage
       }
   }
 }
@@ -77,6 +85,7 @@ query nodesByVaultIdAndType($vaultId: String!, $objectType: String!) {
       ]
   ) {
       edges {
+          cursor
           node {
               id
               tags {
@@ -84,6 +93,9 @@ query nodesByVaultIdAndType($vaultId: String!, $objectType: String!) {
                 value
               }
           }
+      }
+      pageInfo {
+        hasNextPage
       }
   }
 }
