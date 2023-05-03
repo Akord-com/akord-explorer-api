@@ -12,6 +12,7 @@ import { executeQuery, paginatedQuery, TxNode } from "./graphql/client";
 import { WarpFactory, LoggerFactory, DEFAULT_LEVEL_DB_LOCATION, Contract } from "warp-contracts";
 import { EncryptionMetadata } from "@akord/akord-js/lib/core";
 import { NotFound } from "@akord/akord-js/lib/errors/not-found";
+import { Unauthorized } from "@akord/akord-js/lib/errors/unauthorized";
 
 // import Arweave from 'arweave';
 // // Set up Arweave client
@@ -59,7 +60,7 @@ export default class ExplorerApi extends Api {
       vaultId = await this.getVaultIdForNode(id);
     }
     const vault = await this.getVault(vaultId);
-    const node = vault.nodes.filter(node => node.id === id)[0];
+    const node = (vault.nodes ? vault.nodes : []).filter(node => node.id === id)[0];
     const dataTx = this.getDataTx(node);
     const state = await this.getNodeState(dataTx);
     return { ...node, ...state, vaultId };
@@ -70,7 +71,7 @@ export default class ExplorerApi extends Api {
       vaultId = await this.getVaultIdForMembership(id);
     }
     const vault = await this.getVault(vaultId);
-    const membership = vault.memberships.filter(membership => membership.id === id)[0];
+    const membership = (vault.memberships ? vault.memberships : []).filter(membership => membership.id === id)[0];
     const dataTx = this.getDataTx(membership);
     const state = await this.getNodeState(dataTx);
     return { ...membership, ...state, vaultId };
@@ -105,16 +106,17 @@ export default class ExplorerApi extends Api {
     if (vault.public) {
       return { isEncrypted: false, keys: [] };
     }
-    const membership = vault.memberships.filter(membership => membership.address === this.address)[0];
+    const membership = (vault.memberships ? vault.memberships : []).filter(membership => membership.address === this.address)[0];
     return { isEncrypted: true, keys: membership.keys };
   };
 
-  public async getNodeState(stateId: string): Promise<any> {
+  public async getNodeState(stateId: string | undefined): Promise<any> {
+    if (!stateId) return null;
     try {
       const result = await getTxData(stateId, "json");
       return result;
     } catch (error) {
-      if (error === 404 || error?.response?.status === 404) {
+      if (error === 404 || (<any>error)?.response?.status === 404) {
         throw new NotFound("Cannot find state: " + stateId);
       }
     }
@@ -144,8 +146,12 @@ export default class ExplorerApi extends Api {
       .map(async (item: TxNode) => {
         const vaultId = item.tags.filter((tag: Tag) => tag.name === "Contract")[0]?.value;
         const vault = await this.getVault(vaultId, { withMemberships: true });
-        const membership = vault.memberships.filter(membership => membership.address === this.address)[0];
-        vault.keys = membership.keys;
+        const membership = vault.memberships?.filter(membership => membership.address === this.address)[0];
+        if (!membership && !vault.public) {
+          throw new Unauthorized("Not valid vault member");
+        } else {
+          vault.keys = membership?.keys;
+        }
         return vault;
       })) as Array<any>;
     return { items: vaults, nextToken: nextPage };
@@ -158,7 +164,7 @@ export default class ExplorerApi extends Api {
 
   public async getMembershipsByVaultId(vaultId: string, options: ListOptions): Promise<Paginated<Membership>> {
     const vault = await this.getVault(vaultId, { withMemberships: true });
-    return { items: vault.memberships, nextToken: "null" };
+    return { items: vault.memberships as Array<Membership>, nextToken: "null" };
   };
 
   public async getTransactions(vaultId: string): Promise<Array<Transaction>> {
@@ -242,7 +248,7 @@ export default class ExplorerApi extends Api {
   };
 
   private async downloadMemberships(vault: Vault) {
-    vault.memberships = await Promise.all(vault.memberships
+    vault.memberships = await Promise.all((vault.memberships ? vault.memberships : [])
       .map(async (membership: Membership) => {
         const dataTx = this.getDataTx(membership);
         const state = await this.getNodeState(dataTx);
@@ -254,7 +260,7 @@ export default class ExplorerApi extends Api {
     vault.folders = [];
     vault.stacks = [];
     vault.memos = [];
-    vault.nodes = await Promise.all(vault.nodes
+    vault.nodes = await Promise.all((vault.nodes ? vault.nodes : [])
       .map(async (node: NodeLike) => {
         if (node.type === type) {
           const dataTx = this.getDataTx(node);
@@ -270,7 +276,7 @@ export default class ExplorerApi extends Api {
     vault.folders = [];
     vault.stacks = [];
     vault.memos = [];
-    vault.nodes = await Promise.all(vault.nodes
+    vault.nodes = await Promise.all((vault.nodes ? vault.nodes : [])
       .map(async (node: NodeLike) => {
         const dataTx = this.getDataTx(node);
         const state = await this.getNodeState(dataTx);

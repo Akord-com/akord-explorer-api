@@ -3,7 +3,7 @@ import { GraphQLClient } from "graphql-request";
 const executeQuery = async function (query: any, variables: any): Promise<{ items: TxNode[], nextToken: string }> {
   const client = new GraphQLClient("https://arweave.net/graphql", { headers: {} })
   const result = await client.request(query, variables) as GraphQLResult;
-  let nextToken = undefined;
+  let nextToken = undefined as any;
   const hasNextPage = result?.transactions?.pageInfo?.hasNextPage;
   if (hasNextPage) {
     nextToken = result?.transactions?.edges?.[result.transactions.edges.length - 1].cursor;
@@ -14,7 +14,7 @@ const executeQuery = async function (query: any, variables: any): Promise<{ item
 
 const paginatedQuery = async function (query: any, variables: any): Promise<TxNode[]> {
   let nextToken = undefined;
-  let results = [];
+  let results: TxNode[] = [];
   do {
     const { items, nextToken: nextPage } = await executeQuery(query, variables);
     results = results.concat(items);
