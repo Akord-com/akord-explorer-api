@@ -250,7 +250,7 @@ export default class ExplorerApi extends Api {
   };
 
   private async downloadMemberships(vault: Vault) {
-    await Promise.all(vault.memberships
+    vault.memberships = await Promise.all(vault.memberships
       .map(async (membership: Membership) => {
         const dataTx = this.getDataTx(membership);
         const state = await this.getNodeState(dataTx);
@@ -262,7 +262,7 @@ export default class ExplorerApi extends Api {
     vault.folders = [];
     vault.stacks = [];
     vault.memos = [];
-    await Promise.all(vault.nodes
+    vault.nodes = await Promise.all(vault.nodes
       .map(async (node: NodeLike) => {
         const dataTx = this.getDataTx(node);
         const state = await this.getNodeState(dataTx);
