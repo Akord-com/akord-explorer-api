@@ -171,10 +171,46 @@ query membershipsById($id: String!) {
 }
 `;
 
+const vaultsByTagsQuery = gql`
+query vaultsByTags($tags: [String!]!) {
+  transactions(
+      tags: [
+        {
+          name: "Akord-Tag",
+          values: $tags
+        },
+        {
+          name: "Function-Name",
+          values: ["vault:init", "vault:update"]
+        },
+        {
+          name: "Protocol-Name",
+          values: ["Akord", "Akord-Test"]
+        }
+      ]
+  ) {
+      edges {
+          cursor
+          node {
+              id
+              tags {
+                name
+                value
+              }
+          }
+      }
+      pageInfo {
+        hasNextPage
+      }
+  }
+}
+`;
+
 export {
   timelineQuery,
   membershipsQuery,
   nodesQuery,
   nodeVaultIdQuery,
-  membershipVaultIdQuery
+  membershipVaultIdQuery,
+  vaultsByTagsQuery
 }

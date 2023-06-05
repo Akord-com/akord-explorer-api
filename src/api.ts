@@ -4,7 +4,7 @@ import { NodeLike, NodeType, Vault, Membership, MembershipKeys, Transaction } fr
 import { Paginated } from "@akord/akord-js/lib/types/paginated";
 import { ListOptions, VaultApiGetOptions } from "@akord/akord-js/lib/types/query-options";
 import { getTxData, getTxMetadata } from "@akord/akord-js/lib/arweave";
-import { membershipVaultIdQuery, membershipsQuery, nodeVaultIdQuery, timelineQuery } from "./graphql/queries";
+import { membershipVaultIdQuery, membershipsQuery, nodeVaultIdQuery, timelineQuery, vaultsByTagsQuery } from "./graphql/queries";
 import { executeQuery, paginatedQuery, TxNode } from "./graphql/client";
 import { WarpFactory, LoggerFactory, DEFAULT_LEVEL_DB_LOCATION, Contract } from "warp-contracts";
 import { EncryptionMetadata } from "@akord/akord-js/lib/core";
@@ -188,6 +188,20 @@ export default class ExplorerApi extends Api {
 
   public async getUser(): Promise<any> {
     return null;
+  };
+
+  public async getVaultsByTags(tags: string[]): Promise<Array<Vault>> {
+    const items = await paginatedQuery(vaultsByTagsQuery,
+      { tags: tags });
+    const vaults = await Promise.all(items
+      .map(async (item: TxNode) => {
+        const vaultId = item.tags.filter((tag: Tag) => tag.name === "Contract")[0]?.value;
+        const vault = await this.getVault(vaultId);
+        return vault;
+      })) as Array<Vault>;
+    const filteredVaults = vaults.filter((vault: Vault) => vault.public && tags?.every((tag: string) => vault.tags?.includes(tag)));
+    // remove duplicates
+    return [...new Map(filteredVaults.map(item => [item.id, item])).values()];
   };
 
   // The explorer API is read-only, hence the following methods are not implemented
