@@ -1,16 +1,17 @@
 {
-  "name": "akord-explorer-api",
-  "version": "1.0.0",
+  "name": "@akord/akord-explorer-api",
+  "version": "1.0.1",
   "description": "A decentralized API to read Akord content directly from the permaweb",
-  "main": "src/api.ts",
+  "main": "lib/index.js",
   "author": "Akord Team",
   "license": "MIT",
-  "private": false,
   "scripts": {
-    "clean": "rm -rf ./lib"
+    "clean": "rm -rf ./lib",
+    "build": "rm -r lib || true && tsc -p ."
   },
   "dependencies": {
-    "@akord/akord-js": "4.11.0",
+    "@akord/akord-js": "4.11.1",
+    "@akord/akord-explorer-api": "1.0.0",
     "dotenv": "^16.0.1",
     "graphql": "15.7.0",
     "graphql-request": "4.3.0",
@@ -22,5 +23,17 @@
     "jest": "^28.1.1",
     "ts-jest": "^28.0.5",
     "typescript": "4.8.4"
-  }
+  },
+  "types": "./lib/index.d.ts",
+  "directories": {
+    "lib": "lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Akord-com/akord-explorer-api.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Akord-com/akord-explorer-api/issues"
+  },
+  "homepage": "https://github.com/Akord-com/akord-explorer-api#readme"
 }
