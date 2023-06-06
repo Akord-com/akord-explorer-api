@@ -28,6 +28,13 @@
   "directories": {
     "lib": "lib"
   },
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.d.ts",
+    "lib/api.js",
+    "lib/api.d.ts",
+    "lib/index.d.ts"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Akord-com/akord-explorer-api.git"
