@@ -2,7 +2,7 @@
   "name": "akord-explorer-api",
   "version": "1.0.0",
   "description": "A decentralized API to read Akord content directly from the permaweb",
-  "main": "lib/api.js",
+  "main": "src/api.js",
   "author": "Akord Team",
   "license": "MIT",
   "private": false,
