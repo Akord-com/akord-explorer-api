@@ -4,14 +4,16 @@ import { NodeLike, NodeType, Vault, Membership, MembershipKeys, Transaction } fr
 import { Paginated } from "@akord/akord-js/lib/types/paginated";
 import { ListOptions, VaultApiGetOptions } from "@akord/akord-js/lib/types/query-options";
 import { getTxData, getTxMetadata } from "@akord/akord-js/lib/arweave";
-import { membershipVaultIdQuery, membershipsQuery, nodeVaultIdQuery, timelineQuery, vaultsByTagsQuery } from "./graphql/queries";
-import { executeQuery, paginatedQuery, TxNode } from "./graphql/client";
+import { membershipVaultIdQuery, membershipsQuery, nodeVaultIdQuery, nodesByTagsAndTypeQuery, nodesByTypeQuery, nodesQuery, timelineQuery, vaultsByTagsQuery, vaultsQuery } from "./graphql/queries";
+import { ApiClient, TxNode } from "./graphql/client";
 import { WarpFactory, LoggerFactory, DEFAULT_LEVEL_DB_LOCATION, Contract } from "warp-contracts";
 import { EncryptionMetadata } from "@akord/akord-js/lib/core";
 import { NotFound } from "@akord/akord-js/lib/errors/not-found";
 import { Unauthorized } from "@akord/akord-js/lib/errors/unauthorized";
 import { Forbidden } from "@akord/akord-js/lib/errors/forbidden";
+import { BadRequest } from "@akord/akord-js/lib/errors/bad-request";
 import { EncryptedKeys } from "@akord/crypto";
+import { ApiConfig, defaultApiConfig, initConfig } from "./config";
 
 // import Arweave from 'arweave';
 // // Set up Arweave client
@@ -21,7 +23,6 @@ import { EncryptedKeys } from "@akord/crypto";
 //   protocol: "https"
 // });
 
-const ARWEAVE_URL = "https://arweave.net/";
 const DEFAULT_LIMIT = 100, MAX_LIMIT = 100;
 
 // Set up SmartWeave client
@@ -47,11 +48,13 @@ const getLimit = (limit?: number): number => {
 
 export default class ExplorerApi extends Api {
 
-  address: string;
+  config: ApiConfig;
+  client: ApiClient;
 
-  constructor(address: string) {
+  constructor(config: ApiConfig = defaultApiConfig) {
     super();
-    this.address = address;
+    this.config = initConfig(config);
+    this.client = new ApiClient(this.config);
   }
 
   public async getNode<T>(id: string, type: NodeType, vaultId?: string): Promise<T> {
@@ -62,7 +65,7 @@ export default class ExplorerApi extends Api {
     const node = (vault.nodes ? vault.nodes : []).filter(node => node.id === id)[0];
     const dataTx = this.getDataTx(node);
     const state = await this.getNodeState(dataTx);
-    return this.withVaultContext({ ...node, ...state, vaultId }, vault);
+    return formatDates(this.withVaultContext({ ...node, ...state, vaultId }, vault));
   };
 
   public async getMembership(id: string, vaultId?: string): Promise<Membership> {
@@ -73,7 +76,7 @@ export default class ExplorerApi extends Api {
     const membership = (vault.memberships ? vault.memberships : []).filter(membership => membership.id === id)[0];
     const dataTx = this.getDataTx(membership);
     const state = await this.getNodeState(dataTx);
-    return this.withVaultContext({ ...membership, ...state, vaultId }, vault);
+    return formatDates(this.withVaultContext({ ...membership, ...state, vaultId }, vault));
   };
 
   public async getVault(id: string, options?: VaultGetOptions): Promise<Vault> {
@@ -81,7 +84,7 @@ export default class ExplorerApi extends Api {
     let vault = (await contract.readState()).cachedValue.state;
     const dataTx = this.getDataTx(vault);
     const state = await this.getNodeState(dataTx);
-    vault = { ...vault, ...state };
+    vault = formatDates({ ...vault, ...state });
     if (!vault.public || options?.deep || options?.withMemberships) {
       await this.downloadMemberships(vault);
     }
@@ -105,7 +108,7 @@ export default class ExplorerApi extends Api {
     if (vault.public) {
       return { isEncrypted: false, keys: [] };
     }
-    const membership = (vault.memberships ? vault.memberships : []).filter(membership => membership.address === this.address)[0];
+    const membership = this.getCurrentMember(vault.memberships);
     return { isEncrypted: true, keys: membership.keys };
   };
 
@@ -126,8 +129,11 @@ export default class ExplorerApi extends Api {
   };
 
   public async getMemberships(options: ListOptions = {}): Promise<Paginated<Membership>> {
-    const { items, nextToken: nextPage } = await executeQuery(membershipsQuery,
-      { address: this.address, nextToken: options.nextToken, first: getLimit(options.limit) });
+    if (!this.config?.address) {
+      throw new BadRequest("Missing wallet address in api configuration.");
+    }
+    const { items, nextToken: nextPage } = await this.client.executeQuery(membershipsQuery,
+      { address: this.config.address, nextToken: options.nextToken, first: getLimit(options.limit) });
     const memberships = await Promise.all(items
       .map(async (item: TxNode) => {
         const membershipId = item.tags.filter((tag: Tag) => tag.name === "Membership-Id")[0]?.value;
@@ -139,13 +145,16 @@ export default class ExplorerApi extends Api {
   };
 
   public async getVaults(options: ListOptions = {}): Promise<Paginated<Vault>> {
-    const { items, nextToken: nextPage } = await executeQuery(membershipsQuery,
-      { address: this.address, nextToken: options.nextToken, first: getLimit(options.limit) });
+    if (!this.config?.address) {
+      throw new BadRequest("Missing wallet address in api configuration.");
+    }
+    const { items, nextToken: nextPage } = await this.client.executeQuery(membershipsQuery,
+      { address: this.config.address, nextToken: options.nextToken, first: getLimit(options.limit) });
     const vaults = await Promise.all(items
       .map(async (item: TxNode) => {
         const vaultId = item.tags.filter((tag: Tag) => tag.name === "Contract")[0]?.value;
         const vault = await this.getVault(vaultId, { withMemberships: true });
-        const membership = vault.memberships?.filter(membership => membership.address === this.address)[0];
+        const membership = vault.memberships?.filter(membership => membership.address === this.config.address)[0];
         if (!membership && !vault.public) {
           throw new Unauthorized("Not valid vault member");
         } else {
@@ -173,7 +182,7 @@ export default class ExplorerApi extends Api {
   };
 
   public async getTransactions(vaultId: string): Promise<Array<Transaction>> {
-    return await <any>paginatedQuery(timelineQuery, { vaultId });
+    return await <any>this.client.paginatedQuery(timelineQuery, { vaultId });
   };
 
   public async downloadFile(id: string): Promise<{ fileData: ArrayBuffer, metadata: EncryptionMetadata }> {
@@ -190,18 +199,49 @@ export default class ExplorerApi extends Api {
     return null;
   };
 
-  public async getVaultsByTags(tags: string[]): Promise<Array<Vault>> {
-    const items = await paginatedQuery(vaultsByTagsQuery,
-      { tags: tags });
+  public async listAllVaults(options: ListOptions = {}): Promise<Array<Vault>> {
+    let items: Array<TxNode>;
+    if (options.tags) {
+      items = await this.client.paginatedQuery(vaultsByTagsQuery, { tags: options.tags.values });
+    } else {
+      items = await this.client.paginatedQuery(vaultsQuery, {});
+    }
     const vaults = await Promise.all(items
       .map(async (item: TxNode) => {
         const vaultId = item.tags.filter((tag: Tag) => tag.name === "Contract")[0]?.value;
         const vault = await this.getVault(vaultId);
         return vault;
       })) as Array<Vault>;
-    const filteredVaults = vaults.filter((vault: Vault) => vault.public && tags?.every((tag: string) => vault.tags?.includes(tag)));
-    // remove duplicates
-    return [...new Map(filteredVaults.map(item => [item.id, item])).values()];
+    if (options.tags) {
+      const filteredVaults = vaults.filter((vault: Vault) => options.tags?.values.every((tag: string) => vault.tags?.includes(tag)));
+      // remove duplicates
+      return [...new Map(filteredVaults.map(item => [item.id, item])).values()];
+    } else {
+      return vaults;
+    }
+  };
+
+  public async listAllNodes<T>(type: NodeType, options: ListOptions = {}): Promise<Array<T>> {
+    let items: Array<TxNode>;
+    if (options.tags) {
+      items = await this.client.paginatedQuery(nodesByTagsAndTypeQuery, { objectType: type, tags: options.tags.values });
+    } else {
+      items = await this.client.paginatedQuery(nodesByTypeQuery, { objectType: type });
+    }
+    const nodes = await Promise.all(items
+      .map(async (item: TxNode) => {
+        const vaultId = item.tags.filter((tag: Tag) => tag.name === "Contract")[0]?.value;
+        const nodeId = item.tags.filter((tag: Tag) => tag.name === "Node-Id")[0]?.value;
+        const node = await this.getNode<T>(nodeId, type, vaultId);
+        return node;
+      })) as Array<NodeLike>;
+    if (options.tags) {
+      const filteredNodes = nodes.filter((node: NodeLike) => options.tags?.values.every((tag: string) => node.tags?.includes(tag)));
+      // remove duplicates
+      return [...new Map(filteredNodes.map(item => [item.id, item])).values()] as Array<T>;
+    } else {
+      return nodes as Array<T>;
+    }
   };
 
   // The explorer API is read-only, hence the following methods are not implemented
@@ -271,7 +311,7 @@ export default class ExplorerApi extends Api {
       .map(async (membership: Membership) => {
         const dataTx = this.getDataTx(membership);
         const state = await this.getNodeState(dataTx);
-        return { ...membership, ...state, vaultId: vault.id };
+        return formatDates({ ...membership, ...state, vaultId: vault.id });
       }));
   };
 
@@ -285,7 +325,7 @@ export default class ExplorerApi extends Api {
           const dataTx = this.getDataTx(node);
           const state = await this.getNodeState(dataTx);
           vault[node.type.toLowerCase() + "s"].push({ ...node, ...state, vaultId: vault.id });
-          return { ...node, ...state, vaultId: vault.id };
+          return formatDates({ ...node, ...state, vaultId: vault.id });
         }
         return node;
       }));
@@ -300,12 +340,12 @@ export default class ExplorerApi extends Api {
         const dataTx = this.getDataTx(node);
         const state = await this.getNodeState(dataTx);
         vault[node.type.toLowerCase() + "s"].push({ ...node, ...state, vaultId: vault.id });
-        return { ...node, ...state, vaultId: vault.id };
+        return formatDates({ ...node, ...state, vaultId: vault.id });
       }));
   };
 
   private async getVaultIdForNode(nodeId: string): Promise<string> {
-    const items = await paginatedQuery(nodeVaultIdQuery,
+    const items = await this.client.paginatedQuery(nodeVaultIdQuery,
       { id: nodeId });
     const vaultId = items?.[0]?.tags.filter((tag: Tag) => tag.name === "Vault-Id")[0]?.value;
     if (!vaultId) {
@@ -315,7 +355,7 @@ export default class ExplorerApi extends Api {
   };
 
   private async getVaultIdForMembership(membershipId: string): Promise<string> {
-    const items = await paginatedQuery(membershipVaultIdQuery,
+    const items = await this.client.paginatedQuery(membershipVaultIdQuery,
       { id: membershipId });
     const vaultId = items?.[0]?.tags.filter((tag: Tag) => tag.name === "Vault-Id")[0]?.value;
     if (!vaultId) {
@@ -324,14 +364,23 @@ export default class ExplorerApi extends Api {
     return vaultId;
   };
 
+  private getCurrentMember(memberships?: Array<Membership>): Membership {
+    if (!this.config?.address) {
+      throw new BadRequest("Missing wallet address in api configuration.");
+    }
+    const membership = (memberships ? memberships : [])
+      .filter(membership => membership.address === this.config.address)[0];
+    if (!membership) {
+      throw new Forbidden("User is not a valid vault member.");
+    }
+    return membership;
+  }
+
   private withVaultContext(object: any, vault: Vault): any {
     const vaultContext = { __public__: vault.public, __cacheOnly__: false };
     let encryptionContext: { __keys__?: EncryptedKeys[], __publicKey__?: null } = {};
     if (!vault.public) {
-      const membership = (vault.memberships ? vault.memberships : []).filter(membership => membership.address === this.address)[0];
-      if (!membership) {
-        throw new Forbidden("User is not a valid vault member.");
-      }
+      const membership = this.getCurrentMember(vault.memberships);
       encryptionContext.__keys__ = membership.keys;
     }
     return {
@@ -341,6 +390,40 @@ export default class ExplorerApi extends Api {
     }
   }
 }
+
+const formatDates = (state: any) => {
+  if (state.createdAt) {
+    state.createdAt = getDateFromTimestamp(state.createdAt);
+  }
+  if (state.updatedAt) {
+    state.updatedAt = getDateFromTimestamp(state.updatedAt);
+  }
+  if (state.versions && state.versions.length) {
+    state.versions = state.versions.map((version: any) => {
+      if (version.createdAt) {
+        version.createdAt = getDateFromTimestamp(version.createdAt);
+      }
+      if (version.updatedAt) {
+        version.updatedAt = getDateFromTimestamp(version.updatedAt);
+      }
+      if (version.reactions) {
+        version.reactions = version.reactions.map((reaction: any) => {
+          if (version.createdAt) {
+            reaction.createdAt = getDateFromTimestamp(reaction.createdAt);
+          }
+          return reaction;
+        })
+      }
+      return version;
+    })
+  }
+  return state;
+}
+
+
+const getDateFromTimestamp = (timestamp: string): Date => {
+  return new Date(JSON.parse(timestamp));
+};
 
 export type VaultGetOptions =
   VaultApiGetOptions &

@@ -4,6 +4,7 @@ import { ExplorerApi } from "../api";
 import { StorageType } from "@akord/akord-js/lib/types/node";
 
 let akord: Akord;
+let explorerApi: ExplorerApi;
 
 jest.setTimeout(3000000);
 
@@ -16,7 +17,8 @@ const publicStackId = "ffe5df0b-5523-4c6e-9190-9d104b526402";
 describe("Testing explorer api queries", () => {
   beforeAll(async () => {
     const wallet = await AkordWallet.importFromBackupPhrase(backupPhrase);
-    akord = await Akord.init(wallet, { api: new ExplorerApi(await wallet.getAddress()) });
+    explorerApi = new ExplorerApi({ address: await wallet.getAddress() });
+    akord = await Akord.init(wallet, { api: explorerApi });
   });
 
   it("should list vaults", async () => {
@@ -37,14 +39,14 @@ describe("Testing explorer api queries", () => {
   });
 
   it("should get private stack & download latest version", async () => {
-    const stack = await akord.stack.get(privateStackId);
+    const stack = await akord.stack.get(privateStackId, { vaultId: privateVaultId });
     const fileUri = stack.getUri(StorageType.ARWEAVE);
     console.log(fileUri);
     const file = akord.file.get(fileUri, privateVaultId);
   });
 
   it("should get public stack & download latest version", async () => {
-    const stack = await akord.stack.get(publicStackId);
+    const stack = await akord.stack.get(publicStackId, { vaultId: publicVaultId });
     const fileUri = stack.getUri(StorageType.ARWEAVE);
     console.log(fileUri);
     const file = akord.file.get(fileUri, privateVaultId);
