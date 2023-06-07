@@ -5,13 +5,15 @@ import { Paginated } from "@akord/akord-js/lib/types/paginated";
 import { ListOptions, VaultApiGetOptions } from "@akord/akord-js/lib/types/query-options";
 import { getTxData, getTxMetadata } from "@akord/akord-js/lib/arweave";
 import { membershipVaultIdQuery, membershipsQuery, nodeVaultIdQuery, timelineQuery, vaultsByTagsQuery } from "./graphql/queries";
-import { executeQuery, paginatedQuery, TxNode } from "./graphql/client";
+import { ApiClient, TxNode } from "./graphql/client";
 import { WarpFactory, LoggerFactory, DEFAULT_LEVEL_DB_LOCATION, Contract } from "warp-contracts";
 import { EncryptionMetadata } from "@akord/akord-js/lib/core";
 import { NotFound } from "@akord/akord-js/lib/errors/not-found";
 import { Unauthorized } from "@akord/akord-js/lib/errors/unauthorized";
 import { Forbidden } from "@akord/akord-js/lib/errors/forbidden";
+import { BadRequest } from "@akord/akord-js/lib/errors/bad-request";
 import { EncryptedKeys } from "@akord/crypto";
+import { ApiConfig, defaultApiConfig, initConfig } from "./config";
 
 // import Arweave from 'arweave';
 // // Set up Arweave client
@@ -21,7 +23,6 @@ import { EncryptedKeys } from "@akord/crypto";
 //   protocol: "https"
 // });
 
-const ARWEAVE_URL = "https://arweave.net/";
 const DEFAULT_LIMIT = 100, MAX_LIMIT = 100;
 
 // Set up SmartWeave client
@@ -47,11 +48,13 @@ const getLimit = (limit?: number): number => {
 
 export default class ExplorerApi extends Api {
 
-  address: string;
+  config: ApiConfig;
+  client: ApiClient;
 
-  constructor(address: string) {
+  constructor(config: ApiConfig = defaultApiConfig) {
     super();
-    this.address = address;
+    this.config = initConfig(config);
+    this.client = new ApiClient(this.config);
   }
 
   public async getNode<T>(id: string, type: NodeType, vaultId?: string): Promise<T> {
@@ -105,7 +108,7 @@ export default class ExplorerApi extends Api {
     if (vault.public) {
       return { isEncrypted: false, keys: [] };
     }
-    const membership = (vault.memberships ? vault.memberships : []).filter(membership => membership.address === this.address)[0];
+    const membership = this.getCurrentMember(vault.memberships);
     return { isEncrypted: true, keys: membership.keys };
   };
 
@@ -126,8 +129,11 @@ export default class ExplorerApi extends Api {
   };
 
   public async getMemberships(options: ListOptions = {}): Promise<Paginated<Membership>> {
-    const { items, nextToken: nextPage } = await executeQuery(membershipsQuery,
-      { address: this.address, nextToken: options.nextToken, first: getLimit(options.limit) });
+    if (!this.config?.address) {
+      throw new BadRequest("Missing wallet address in api configuration.");
+    }
+    const { items, nextToken: nextPage } = await this.client.executeQuery(membershipsQuery,
+      { address: this.config.address, nextToken: options.nextToken, first: getLimit(options.limit) });
     const memberships = await Promise.all(items
       .map(async (item: TxNode) => {
         const membershipId = item.tags.filter((tag: Tag) => tag.name === "Membership-Id")[0]?.value;
@@ -139,13 +145,16 @@ export default class ExplorerApi extends Api {
   };
 
   public async getVaults(options: ListOptions = {}): Promise<Paginated<Vault>> {
-    const { items, nextToken: nextPage } = await executeQuery(membershipsQuery,
-      { address: this.address, nextToken: options.nextToken, first: getLimit(options.limit) });
+    if (!this.config?.address) {
+      throw new BadRequest("Missing wallet address in api configuration.");
+    }
+    const { items, nextToken: nextPage } = await this.client.executeQuery(membershipsQuery,
+      { address: this.config.address, nextToken: options.nextToken, first: getLimit(options.limit) });
     const vaults = await Promise.all(items
       .map(async (item: TxNode) => {
         const vaultId = item.tags.filter((tag: Tag) => tag.name === "Contract")[0]?.value;
         const vault = await this.getVault(vaultId, { withMemberships: true });
-        const membership = vault.memberships?.filter(membership => membership.address === this.address)[0];
+        const membership = vault.memberships?.filter(membership => membership.address === this.config.address)[0];
         if (!membership && !vault.public) {
           throw new Unauthorized("Not valid vault member");
         } else {
@@ -173,7 +182,7 @@ export default class ExplorerApi extends Api {
   };
 
   public async getTransactions(vaultId: string): Promise<Array<Transaction>> {
-    return await <any>paginatedQuery(timelineQuery, { vaultId });
+    return await <any>this.client.paginatedQuery(timelineQuery, { vaultId });
   };
 
   public async downloadFile(id: string): Promise<{ fileData: ArrayBuffer, metadata: EncryptionMetadata }> {
@@ -191,7 +200,7 @@ export default class ExplorerApi extends Api {
   };
 
   public async getVaultsByTags(tags: string[]): Promise<Array<Vault>> {
-    const items = await paginatedQuery(vaultsByTagsQuery,
+    const items = await this.client.paginatedQuery(vaultsByTagsQuery,
       { tags: tags });
     const vaults = await Promise.all(items
       .map(async (item: TxNode) => {
@@ -305,7 +314,7 @@ export default class ExplorerApi extends Api {
   };
 
   private async getVaultIdForNode(nodeId: string): Promise<string> {
-    const items = await paginatedQuery(nodeVaultIdQuery,
+    const items = await this.client.paginatedQuery(nodeVaultIdQuery,
       { id: nodeId });
     const vaultId = items?.[0]?.tags.filter((tag: Tag) => tag.name === "Vault-Id")[0]?.value;
     if (!vaultId) {
@@ -315,7 +324,7 @@ export default class ExplorerApi extends Api {
   };
 
   private async getVaultIdForMembership(membershipId: string): Promise<string> {
-    const items = await paginatedQuery(membershipVaultIdQuery,
+    const items = await this.client.paginatedQuery(membershipVaultIdQuery,
       { id: membershipId });
     const vaultId = items?.[0]?.tags.filter((tag: Tag) => tag.name === "Vault-Id")[0]?.value;
     if (!vaultId) {
@@ -324,14 +333,23 @@ export default class ExplorerApi extends Api {
     return vaultId;
   };
 
+  private getCurrentMember(memberships?: Array<Membership>): Membership {
+    if (!this.config?.address) {
+      throw new BadRequest("Missing wallet address in api configuration.");
+    }
+    const membership = (memberships ? memberships : [])
+      .filter(membership => membership.address === this.config.address)[0];
+    if (!membership) {
+      throw new Forbidden("User is not a valid vault member.");
+    }
+    return membership;
+  }
+
   private withVaultContext(object: any, vault: Vault): any {
     const vaultContext = { __public__: vault.public, __cacheOnly__: false };
     let encryptionContext: { __keys__?: EncryptedKeys[], __publicKey__?: null } = {};
     if (!vault.public) {
-      const membership = (vault.memberships ? vault.memberships : []).filter(membership => membership.address === this.address)[0];
-      if (!membership) {
-        throw new Forbidden("User is not a valid vault member.");
-      }
+      const membership = this.getCurrentMember(vault.memberships);
       encryptionContext.__keys__ = membership.keys;
     }
     return {

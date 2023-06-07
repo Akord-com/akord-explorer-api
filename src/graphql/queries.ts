@@ -1,7 +1,7 @@
 import { gql } from "graphql-request";
 
 const timelineQuery = gql`
-query transactions($vaultId: String!) {
+query transactions($vaultId: String!, $protocolName: String!) {
   transactions(
       tags: [
         {
@@ -14,7 +14,7 @@ query transactions($vaultId: String!) {
         },
         {
           name: "Protocol-Name",
-          values: ["Akord", "Akord-Test"]
+          values: [$protocolName, "Akord-Test"]
         }
       ]
   ) {
@@ -36,7 +36,7 @@ query transactions($vaultId: String!) {
 `;
 
 const membershipsQuery = gql`
-query membershipsByAddress($address: String!) {
+query membershipsByAddress($address: String!, $protocolName: String!) {
   transactions(
       tags: [
         {
@@ -45,7 +45,7 @@ query membershipsByAddress($address: String!) {
         },
         {
           name: "Protocol-Name",
-          values: ["Akord", "Akord-Test"]
+          values: [$protocolName, "Akord-Test"]
         }
       ]
   ) {
@@ -67,7 +67,7 @@ query membershipsByAddress($address: String!) {
 `;
 
 const nodesQuery = gql`
-query nodesByVaultIdAndType($vaultId: String!, $objectType: String!) {
+query nodesByVaultIdAndType($vaultId: String!, $objectType: String!, $protocolName: String!) {
   transactions(
       tags: [
         {
@@ -80,7 +80,7 @@ query nodesByVaultIdAndType($vaultId: String!, $objectType: String!) {
         },
         {
           name: "Protocol-Name",
-          values: ["Akord", "Akord-Test"]
+          values: [$protocolName, "Akord-Test"]
         }
       ]
   ) {
@@ -102,7 +102,7 @@ query nodesByVaultIdAndType($vaultId: String!, $objectType: String!) {
 `;
 
 const nodeVaultIdQuery = gql`
-query nodesById($id: String!) {
+query nodesById($id: String!, $protocolName: String!) {
   transactions(
       tags: [
         {
@@ -115,7 +115,7 @@ query nodesById($id: String!) {
         },
         {
           name: "Protocol-Name",
-          values: ["Akord", "Akord-Test"]
+          values: [$protocolName, "Akord-Test"]
         }
       ]
   ) {
@@ -137,7 +137,7 @@ query nodesById($id: String!) {
 `;
 
 const membershipVaultIdQuery = gql`
-query membershipsById($id: String!) {
+query membershipsById($id: String!, $protocolName: String!) {
   transactions(
       tags: [
         {
@@ -150,7 +150,7 @@ query membershipsById($id: String!) {
         },
         {
           name: "Protocol-Name",
-          values: ["Akord", "Akord-Test"]
+          values: [$protocolName, "Akord-Test"]
         }
       ]
   ) {
@@ -172,7 +172,7 @@ query membershipsById($id: String!) {
 `;
 
 const vaultsByTagsQuery = gql`
-query vaultsByTags($tags: [String!]!) {
+query vaultsByTags($tags: [String!]!, $protocolName: String!) {
   transactions(
       tags: [
         {
@@ -185,7 +185,7 @@ query vaultsByTags($tags: [String!]!) {
         },
         {
           name: "Protocol-Name",
-          values: ["Akord", "Akord-Test"]
+          values: [$protocolName, "Akord-Test"]
         }
       ]
   ) {
