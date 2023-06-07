@@ -186,6 +186,10 @@ query vaultsByTags($tags: [String!]!, $protocolName: String!) {
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "Public",
+          values: ["true"]
         }
       ]
   ) {
@@ -206,11 +210,132 @@ query vaultsByTags($tags: [String!]!, $protocolName: String!) {
 }
 `;
 
+const vaultsQuery = gql`
+query vaults($protocolName: String!) {
+  transactions(
+      tags: [
+        {
+          name: "Function-Name",
+          values: ["vault:init"]
+        },
+        {
+          name: "Protocol-Name",
+          values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "Public",
+          values: ["true"]
+        }
+      ]
+  ) {
+      edges {
+          cursor
+          node {
+              id
+              tags {
+                name
+                value
+              }
+          }
+      }
+      pageInfo {
+        hasNextPage
+      }
+  }
+}
+`;
+
+const nodesByTypeQuery = gql`
+query nodesByType($objectType: String!, $protocolName: String!) {
+  transactions(
+      tags: [
+        {
+          name: "Function-Name",
+          values: ["node:create"]
+        },
+        {
+          name: "Protocol-Name",
+          values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "Public",
+          values: ["true"]
+        },
+        {
+          name: "Node-Type",
+          values: [$objectType]
+        }
+      ]
+  ) {
+      edges {
+          cursor
+          node {
+              id
+              tags {
+                name
+                value
+              }
+          }
+      }
+      pageInfo {
+        hasNextPage
+      }
+  }
+}
+`;
+
+const nodesByTagsAndTypeQuery = gql`
+query nodesByTagsAndType($tags: [String!]!, $objectType: String!, $protocolName: String!) {
+  transactions(
+      tags: [
+        {
+          name: "Akord-Tag",
+          values: $tags
+        },
+        {
+          name: "Function-Name",
+          values: ["vault:init", "vault:update"]
+        },
+        {
+          name: "Protocol-Name",
+          values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "Public",
+          values: ["true"]
+        },
+        {
+          name: "Node-Type",
+          values: [$objectType]
+        }
+      ]
+  ) {
+      edges {
+          cursor
+          node {
+              id
+              tags {
+                name
+                value
+              }
+          }
+      }
+      pageInfo {
+        hasNextPage
+      }
+  }
+}
+`;
+
+
 export {
   timelineQuery,
   membershipsQuery,
   nodesQuery,
   nodeVaultIdQuery,
   membershipVaultIdQuery,
-  vaultsByTagsQuery
+  vaultsByTagsQuery,
+  vaultsQuery,
+  nodesByTypeQuery,
+  nodesByTagsAndTypeQuery
 }

@@ -4,7 +4,7 @@ import { NodeLike, NodeType, Vault, Membership, MembershipKeys, Transaction } fr
 import { Paginated } from "@akord/akord-js/lib/types/paginated";
 import { ListOptions, VaultApiGetOptions } from "@akord/akord-js/lib/types/query-options";
 import { getTxData, getTxMetadata } from "@akord/akord-js/lib/arweave";
-import { membershipVaultIdQuery, membershipsQuery, nodeVaultIdQuery, timelineQuery, vaultsByTagsQuery } from "./graphql/queries";
+import { membershipVaultIdQuery, membershipsQuery, nodeVaultIdQuery, nodesByTagsAndTypeQuery, nodesByTypeQuery, nodesQuery, timelineQuery, vaultsByTagsQuery, vaultsQuery } from "./graphql/queries";
 import { ApiClient, TxNode } from "./graphql/client";
 import { WarpFactory, LoggerFactory, DEFAULT_LEVEL_DB_LOCATION, Contract } from "warp-contracts";
 import { EncryptionMetadata } from "@akord/akord-js/lib/core";
@@ -199,18 +199,49 @@ export default class ExplorerApi extends Api {
     return null;
   };
 
-  public async getVaultsByTags(tags: string[]): Promise<Array<Vault>> {
-    const items = await this.client.paginatedQuery(vaultsByTagsQuery,
-      { tags: tags });
+  public async listAllVaults(options: ListOptions = {}): Promise<Array<Vault>> {
+    let items: Array<TxNode>;
+    if (options.tags) {
+      items = await this.client.paginatedQuery(vaultsByTagsQuery, { tags: options.tags.values });
+    } else {
+      items = await this.client.paginatedQuery(vaultsQuery, {});
+    }
     const vaults = await Promise.all(items
       .map(async (item: TxNode) => {
         const vaultId = item.tags.filter((tag: Tag) => tag.name === "Contract")[0]?.value;
         const vault = await this.getVault(vaultId);
         return vault;
       })) as Array<Vault>;
-    const filteredVaults = vaults.filter((vault: Vault) => vault.public && tags?.every((tag: string) => vault.tags?.includes(tag)));
-    // remove duplicates
-    return [...new Map(filteredVaults.map(item => [item.id, item])).values()];
+    if (options.tags) {
+      const filteredVaults = vaults.filter((vault: Vault) => options.tags?.values.every((tag: string) => vault.tags?.includes(tag)));
+      // remove duplicates
+      return [...new Map(filteredVaults.map(item => [item.id, item])).values()];
+    } else {
+      return vaults;
+    }
+  };
+
+  public async listAllNodes<T>(type: NodeType, options: ListOptions = {}): Promise<Array<T>> {
+    let items: Array<TxNode>;
+    if (options.tags) {
+      items = await this.client.paginatedQuery(nodesByTagsAndTypeQuery, { objectType: type, tags: options.tags.values });
+    } else {
+      items = await this.client.paginatedQuery(nodesByTypeQuery, { objectType: type });
+    }
+    const nodes = await Promise.all(items
+      .map(async (item: TxNode) => {
+        const vaultId = item.tags.filter((tag: Tag) => tag.name === "Contract")[0]?.value;
+        const nodeId = item.tags.filter((tag: Tag) => tag.name === "Node-Id")[0]?.value;
+        const node = await this.getNode<T>(nodeId, type, vaultId);
+        return node;
+      })) as Array<NodeLike>;
+    if (options.tags) {
+      const filteredNodes = nodes.filter((node: NodeLike) => options.tags?.values.every((tag: string) => node.tags?.includes(tag)));
+      // remove duplicates
+      return [...new Map(filteredNodes.map(item => [item.id, item])).values()] as Array<T>;
+    } else {
+      return nodes as Array<T>;
+    }
   };
 
   // The explorer API is read-only, hence the following methods are not implemented
