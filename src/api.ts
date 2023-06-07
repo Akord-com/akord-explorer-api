@@ -65,7 +65,7 @@ export default class ExplorerApi extends Api {
     const node = (vault.nodes ? vault.nodes : []).filter(node => node.id === id)[0];
     const dataTx = this.getDataTx(node);
     const state = await this.getNodeState(dataTx);
-    return this.withVaultContext({ ...node, ...state, vaultId }, vault);
+    return formatDates(this.withVaultContext({ ...node, ...state, vaultId }, vault));
   };
 
   public async getMembership(id: string, vaultId?: string): Promise<Membership> {
@@ -76,7 +76,7 @@ export default class ExplorerApi extends Api {
     const membership = (vault.memberships ? vault.memberships : []).filter(membership => membership.id === id)[0];
     const dataTx = this.getDataTx(membership);
     const state = await this.getNodeState(dataTx);
-    return this.withVaultContext({ ...membership, ...state, vaultId }, vault);
+    return formatDates(this.withVaultContext({ ...membership, ...state, vaultId }, vault));
   };
 
   public async getVault(id: string, options?: VaultGetOptions): Promise<Vault> {
@@ -84,7 +84,7 @@ export default class ExplorerApi extends Api {
     let vault = (await contract.readState()).cachedValue.state;
     const dataTx = this.getDataTx(vault);
     const state = await this.getNodeState(dataTx);
-    vault = { ...vault, ...state };
+    vault = formatDates({ ...vault, ...state });
     if (!vault.public || options?.deep || options?.withMemberships) {
       await this.downloadMemberships(vault);
     }
@@ -280,7 +280,7 @@ export default class ExplorerApi extends Api {
       .map(async (membership: Membership) => {
         const dataTx = this.getDataTx(membership);
         const state = await this.getNodeState(dataTx);
-        return { ...membership, ...state, vaultId: vault.id };
+        return formatDates({ ...membership, ...state, vaultId: vault.id });
       }));
   };
 
@@ -294,7 +294,7 @@ export default class ExplorerApi extends Api {
           const dataTx = this.getDataTx(node);
           const state = await this.getNodeState(dataTx);
           vault[node.type.toLowerCase() + "s"].push({ ...node, ...state, vaultId: vault.id });
-          return { ...node, ...state, vaultId: vault.id };
+          return formatDates({ ...node, ...state, vaultId: vault.id });
         }
         return node;
       }));
@@ -309,7 +309,7 @@ export default class ExplorerApi extends Api {
         const dataTx = this.getDataTx(node);
         const state = await this.getNodeState(dataTx);
         vault[node.type.toLowerCase() + "s"].push({ ...node, ...state, vaultId: vault.id });
-        return { ...node, ...state, vaultId: vault.id };
+        return formatDates({ ...node, ...state, vaultId: vault.id });
       }));
   };
 
@@ -359,6 +359,40 @@ export default class ExplorerApi extends Api {
     }
   }
 }
+
+const formatDates = (state: any) => {
+  if (state.createdAt) {
+    state.createdAt = getDateFromTimestamp(state.createdAt);
+  }
+  if (state.updatedAt) {
+    state.updatedAt = getDateFromTimestamp(state.updatedAt);
+  }
+  if (state.versions && state.versions.length) {
+    state.versions = state.versions.map((version: any) => {
+      if (version.createdAt) {
+        version.createdAt = getDateFromTimestamp(version.createdAt);
+      }
+      if (version.updatedAt) {
+        version.updatedAt = getDateFromTimestamp(version.updatedAt);
+      }
+      if (version.reactions) {
+        version.reactions = version.reactions.map((reaction: any) => {
+          if (version.createdAt) {
+            reaction.createdAt = getDateFromTimestamp(reaction.createdAt);
+          }
+          return reaction;
+        })
+      }
+      return version;
+    })
+  }
+  return state;
+}
+
+
+const getDateFromTimestamp = (timestamp: string): Date => {
+  return new Date(JSON.parse(timestamp));
+};
 
 export type VaultGetOptions =
   VaultApiGetOptions &
