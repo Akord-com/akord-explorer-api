@@ -300,7 +300,7 @@ export default class ExplorerApi extends Api {
   private findById(id: string, objects?: Array<NodeLike | Membership>) {
     const object = (objects ? objects : []).find(object => object.id === id);
     if (!object) {
-      throw new NotFound("Cannot vault object with id: " + id);
+      throw new NotFound("Cannot find vault object with id: " + id);
     }
     return object;
   };
@@ -315,7 +315,7 @@ export default class ExplorerApi extends Api {
   private getTagValue(tags: Tags, name: string): string {
     const tagValue = tags.find((tag: Tag) => tag.name === name)?.value;
     if (!tagValue) {
-      throw new NotFound("Cannot fing tag value for: " + name);
+      throw new NotFound("Cannot find tag value for: " + name);
     }
     return tagValue;
   }
