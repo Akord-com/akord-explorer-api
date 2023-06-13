@@ -10,7 +10,7 @@
     "build": "rm -r lib || true && tsc -p ."
   },
   "dependencies": {
-    "@akord/akord-js": "4.11.1",
+    "@akord/akord-js": "4.12.1",
     "dotenv": "^16.0.1",
     "graphql": "15.7.0",
     "graphql-request": "4.3.0",

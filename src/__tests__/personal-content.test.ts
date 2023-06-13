@@ -1,7 +1,6 @@
-import { Akord } from "@akord/akord-js";
+import { Akord, StorageType } from "@akord/akord-js";
 import { AkordWallet } from "@akord/crypto";
 import { ExplorerApi } from "../api";
-import { StorageType } from "@akord/akord-js/lib/types/node";
 
 let akord: Akord;
 let explorerApi: ExplorerApi;
@@ -43,6 +42,7 @@ describe("Testing explorer api queries", () => {
     const fileUri = stack.getUri(StorageType.ARWEAVE);
     console.log(fileUri);
     const fileData = await akord.file.get(fileUri, privateVaultId);
+    console.log(fileData);
   });
 
   it("should get membership", async () => {
@@ -53,7 +53,8 @@ describe("Testing explorer api queries", () => {
     const stack = await akord.stack.get(publicStackId, { vaultId: publicVaultId });
     const fileUri = stack.getUri(StorageType.ARWEAVE);
     console.log(fileUri);
-    const { fileData } = await akord.file.api.downloadFile(fileUri);
+    const fileData = await akord.file.get(fileUri, publicVaultId);
+    console.log(fileData);
   });
 
   it("should list all folders", async () => {
