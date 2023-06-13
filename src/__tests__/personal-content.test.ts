@@ -42,14 +42,18 @@ describe("Testing explorer api queries", () => {
     const stack = await akord.stack.get(privateStackId, { vaultId: privateVaultId });
     const fileUri = stack.getUri(StorageType.ARWEAVE);
     console.log(fileUri);
-    const file = akord.file.get(fileUri, privateVaultId);
+    const fileData = await akord.file.get(fileUri, privateVaultId);
+  });
+
+  it("should get membership", async () => {
+    const membership = await akord.membership.get('221ca062-9bf1-4673-9e98-6d7eec42e6b1', { vaultId: privateVaultId });
   });
 
   it("should get public stack & download latest version", async () => {
     const stack = await akord.stack.get(publicStackId, { vaultId: publicVaultId });
     const fileUri = stack.getUri(StorageType.ARWEAVE);
     console.log(fileUri);
-    const file = akord.file.get(fileUri, privateVaultId);
+    const { fileData } = await akord.file.api.downloadFile(fileUri);
   });
 
   it("should list all folders", async () => {

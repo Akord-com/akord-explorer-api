@@ -1,5 +1,5 @@
 import { Api } from "@akord/akord-js/lib/api/api";
-import { ContractState, Tag } from "@akord/akord-js/lib/types/contract";
+import { ContractState, Tag, Tags } from "@akord/akord-js/lib/types/contract";
 import { NodeLike, NodeType, Vault, Membership, MembershipKeys, Transaction } from "@akord/akord-js";
 import { Paginated } from "@akord/akord-js/lib/types/paginated";
 import { ListOptions, VaultApiGetOptions } from "@akord/akord-js/lib/types/query-options";
@@ -9,7 +9,6 @@ import { ApiClient, TxNode } from "./graphql/client";
 import { WarpFactory, LoggerFactory, DEFAULT_LEVEL_DB_LOCATION, Contract } from "warp-contracts";
 import { EncryptionMetadata } from "@akord/akord-js/lib/core";
 import { NotFound } from "@akord/akord-js/lib/errors/not-found";
-import { Unauthorized } from "@akord/akord-js/lib/errors/unauthorized";
 import { Forbidden } from "@akord/akord-js/lib/errors/forbidden";
 import { BadRequest } from "@akord/akord-js/lib/errors/bad-request";
 import { EncryptedKeys } from "@akord/crypto";
@@ -62,10 +61,8 @@ export default class ExplorerApi extends Api {
       vaultId = await this.getVaultIdForNode(id);
     }
     const vault = await this.getVault(vaultId);
-    const node = (vault.nodes ? vault.nodes : []).filter(node => node.id === id)[0];
-    const dataTx = this.getDataTx(node);
-    const state = await this.getNodeState(dataTx);
-    return formatDates(this.withVaultContext({ ...node, ...state, vaultId }, vault));
+    const node = this.findById(id, vault.nodes);
+    return this.downloadObject(node, vault);
   };
 
   public async getMembership(id: string, vaultId?: string): Promise<Membership> {
@@ -73,34 +70,34 @@ export default class ExplorerApi extends Api {
       vaultId = await this.getVaultIdForMembership(id);
     }
     const vault = await this.getVault(vaultId);
-    const membership = (vault.memberships ? vault.memberships : []).filter(membership => membership.id === id)[0];
-    const dataTx = this.getDataTx(membership);
-    const state = await this.getNodeState(dataTx);
-    return formatDates(this.withVaultContext({ ...membership, ...state, vaultId }, vault));
+    const membership = this.findById(id, vault.memberships) as Membership;
+    return membership;
   };
 
   public async getVault(id: string, options?: VaultGetOptions): Promise<Vault> {
     const contract = getContract(id);
     let vault = (await contract.readState()).cachedValue.state;
-    const dataTx = this.getDataTx(vault);
-    const state = await this.getNodeState(dataTx);
-    vault = formatDates({ ...vault, ...state });
+    vault = await this.downloadObject(vault);
     if (!vault.public || options?.deep || options?.withMemberships) {
       await this.downloadMemberships(vault);
     }
     if (options?.withStacks) {
-      await this.downloadNodesByType(vault, "Stack");
+      await this.downloadNodes(vault, "Stack");
     }
     if (options?.withFolders) {
-      await this.downloadNodesByType(vault, "Folder");
+      await this.downloadNodes(vault, "Folder");
     }
     if (options?.withMemos) {
-      await this.downloadNodesByType(vault, "Memo");
+      await this.downloadNodes(vault, "Memo");
     }
     if (options?.deep || options?.withNodes) {
       await this.downloadNodes(vault);
     }
-    return this.withVaultContext(vault, vault);
+    if (!vault.public) {
+      const membership = this.getCurrentMember(vault.memberships);
+      vault.__keys__ = membership?.keys;
+    }
+    return vault;
   };
 
   public async getMembershipKeys(vaultId: string): Promise<MembershipKeys> {
@@ -136,8 +133,8 @@ export default class ExplorerApi extends Api {
       { address: this.config.address, nextToken: options.nextToken, first: getLimit(options.limit) });
     const memberships = await Promise.all(items
       .map(async (item: TxNode) => {
-        const membershipId = item.tags.filter((tag: Tag) => tag.name === "Membership-Id")[0]?.value;
-        const vaultId = item.tags.filter((tag: Tag) => tag.name === "Contract")[0]?.value;
+        const vaultId = this.getTagValue(item.tags, "Contract");
+        const membershipId = this.getTagValue(item.tags, "Membership-Id");
         const membership = await this.getMembership(membershipId, vaultId);
         return membership;
       })) as Array<Membership>;
@@ -152,12 +149,10 @@ export default class ExplorerApi extends Api {
       { address: this.config.address, nextToken: options.nextToken, first: getLimit(options.limit) });
     const vaults = await Promise.all(items
       .map(async (item: TxNode) => {
-        const vaultId = item.tags.filter((tag: Tag) => tag.name === "Contract")[0]?.value;
+        const vaultId = this.getTagValue(item.tags, "Contract");
         const vault = await this.getVault(vaultId, { withMemberships: true });
-        const membership = vault.memberships?.filter(membership => membership.address === this.config.address)[0];
-        if (!membership && !vault.public) {
-          throw new Unauthorized("Not valid vault member");
-        } else {
+        if (!vault.public) {
+          const membership = this.getCurrentMember(vault.memberships);
           vault.keys = membership?.keys;
         }
         return vault;
@@ -168,7 +163,7 @@ export default class ExplorerApi extends Api {
   public async getNodesByVaultId<T>(vaultId: string, type: NodeType, options: ListOptions): Promise<Paginated<T>> {
     const vault = await this.getVault(vaultId, { ["with" + type + "s"]: true, withMemberships: true });
     return {
-      items: vault[type.toLowerCase() + "s"]?.map((node: NodeLike) => (this.withVaultContext(node, vault))) as Array<T>,
+      items: vault[type.toLowerCase() + "s"] as Array<T>,
       nextToken: "null"
     };
   };
@@ -176,7 +171,7 @@ export default class ExplorerApi extends Api {
   public async getMembershipsByVaultId(vaultId: string, options: ListOptions): Promise<Paginated<Membership>> {
     const vault = await this.getVault(vaultId, { withMemberships: true });
     return {
-      items: vault.memberships?.map((membership: Membership) => (this.withVaultContext(membership, vault))) as Array<Membership>,
+      items: vault.memberships as Array<Membership>,
       nextToken: "null"
     };
   };
@@ -208,14 +203,12 @@ export default class ExplorerApi extends Api {
     }
     const vaults = await Promise.all(items
       .map(async (item: TxNode) => {
-        const vaultId = item.tags.filter((tag: Tag) => tag.name === "Contract")[0]?.value;
+        const vaultId = this.getTagValue(item.tags, "Contract");
         const vault = await this.getVault(vaultId);
         return vault;
       })) as Array<Vault>;
     if (options.tags) {
-      const filteredVaults = vaults.filter((vault: Vault) => options.tags?.values.every((tag: string) => vault.tags?.includes(tag)));
-      // remove duplicates
-      return [...new Map(filteredVaults.map(item => [item.id, item])).values()];
+      return this.filterByTags<Vault>(options.tags.values, vaults);
     } else {
       return vaults;
     }
@@ -230,15 +223,13 @@ export default class ExplorerApi extends Api {
     }
     const nodes = await Promise.all(items
       .map(async (item: TxNode) => {
-        const vaultId = item.tags.filter((tag: Tag) => tag.name === "Contract")[0]?.value;
-        const nodeId = item.tags.filter((tag: Tag) => tag.name === "Node-Id")[0]?.value;
+        const vaultId = this.getTagValue(item.tags, "Contract");
+        const nodeId = this.getTagValue(item.tags, "Node-Id");
         const node = await this.getNode<T>(nodeId, type, vaultId);
         return node;
-      })) as Array<NodeLike>;
+      })) as Array<T>;
     if (options.tags) {
-      const filteredNodes = nodes.filter((node: NodeLike) => options.tags?.values.every((tag: string) => node.tags?.includes(tag)));
-      // remove duplicates
-      return [...new Map(filteredNodes.map(item => [item.id, item])).values()] as Array<T>;
+      return this.filterByTags<T>(options.tags.values, nodes);
     } else {
       return nodes as Array<T>;
     }
@@ -302,65 +293,78 @@ export default class ExplorerApi extends Api {
     throw new Error("Method not implemented.");
   };
 
-  private getDataTx(object: Vault | Membership | NodeLike) {
+  private getDataTx(object: Object) {
     return object.data?.[object.data.length - 1];
+  };
+
+  private findById(id: string, objects?: Array<NodeLike | Membership>) {
+    const object = (objects ? objects : []).find(object => object.id === id);
+    if (!object) {
+      throw new NotFound("Cannot vault object with id: " + id);
+    }
+    return object;
+  };
+
+  private filterByTags<T>(tags: string[], objects: Array<T>): Array<T> {
+    const filteredArray = (<Array<NodeLike | Vault>>objects).filter((object: NodeLike | Vault) =>
+      tags?.every((tag: string) => object.tags?.includes(tag)));
+    // remove duplicates
+    return [...new Map(filteredArray.map(item => [item.id, item])).values()] as Array<T>;
+  };
+
+  private getTagValue(tags: Tags, name: string): string {
+    const tagValue = tags.find((tag: Tag) => tag.name === name)?.value;
+    if (!tagValue) {
+      throw new NotFound("Cannot fing tag value for: " + name);
+    }
+    return tagValue;
+  }
+
+  private async downloadObject(object: Object, vault?: Vault) {
+    const dataTx = this.getDataTx(object);
+    const state = await this.getNodeState(dataTx);
+    if (!vault) {
+      return formatDates({ ...object, ...state });
+    } else {
+      const formatted = formatDates({ ...object, ...state, vaultId: vault.id });
+      return this.withVaultContext(formatted, vault);
+    }
   };
 
   private async downloadMemberships(vault: Vault) {
     vault.memberships = await Promise.all((vault.memberships ? vault.memberships : [])
       .map(async (membership: Membership) => {
-        const dataTx = this.getDataTx(membership);
-        const state = await this.getNodeState(dataTx);
-        return formatDates({ ...membership, ...state, vaultId: vault.id });
+        const membershipObject = await this.downloadObject(membership, vault);
+        return membershipObject;
       }));
   };
 
-  private async downloadNodesByType(vault: Vault, type: NodeType) {
+  private async downloadNodes(vault: Vault, type?: NodeType) {
     vault.folders = [];
     vault.stacks = [];
     vault.memos = [];
     vault.nodes = await Promise.all((vault.nodes ? vault.nodes : [])
       .map(async (node: NodeLike) => {
-        if (node.type === type) {
-          const dataTx = this.getDataTx(node);
-          const state = await this.getNodeState(dataTx);
-          vault[node.type.toLowerCase() + "s"].push({ ...node, ...state, vaultId: vault.id });
-          return formatDates({ ...node, ...state, vaultId: vault.id });
+        if (!type || (node.type === type)) {
+          const nodeObject = await this.downloadObject(node, vault);
+          vault[node.type.toLowerCase() + "s"].push(nodeObject);
+          return nodeObject;
         }
         return node;
-      }));
-  };
-
-  private async downloadNodes(vault: Vault) {
-    vault.folders = [];
-    vault.stacks = [];
-    vault.memos = [];
-    vault.nodes = await Promise.all((vault.nodes ? vault.nodes : [])
-      .map(async (node: NodeLike) => {
-        const dataTx = this.getDataTx(node);
-        const state = await this.getNodeState(dataTx);
-        vault[node.type.toLowerCase() + "s"].push({ ...node, ...state, vaultId: vault.id });
-        return formatDates({ ...node, ...state, vaultId: vault.id });
       }));
   };
 
   private async getVaultIdForNode(nodeId: string): Promise<string> {
     const items = await this.client.paginatedQuery(nodeVaultIdQuery,
       { id: nodeId });
-    const vaultId = items?.[0]?.tags.filter((tag: Tag) => tag.name === "Vault-Id")[0]?.value;
-    if (!vaultId) {
-      throw new NotFound("Unable to retrieve the vault context.")
-    }
+    const vaultId = this.getTagValue(items?.[0]?.tags, "Vault-Id");
     return vaultId;
   };
 
   private async getVaultIdForMembership(membershipId: string): Promise<string> {
     const items = await this.client.paginatedQuery(membershipVaultIdQuery,
       { id: membershipId });
-    const vaultId = items?.[0]?.tags.filter((tag: Tag) => tag.name === "Vault-Id")[0]?.value;
-    if (!vaultId) {
-      throw new NotFound("Unable to retrieve the vault context.")
-    }
+    const vaultId = this.getTagValue(items?.[0]?.tags, "Vault-Id");
     return vaultId;
   };
 
@@ -376,7 +380,7 @@ export default class ExplorerApi extends Api {
     return membership;
   }
 
-  private withVaultContext(object: any, vault: Vault): any {
+  private withVaultContext(object: Membership | NodeLike, vault: Vault): any {
     const vaultContext = { __public__: vault.public, __cacheOnly__: false };
     let encryptionContext: { __keys__?: EncryptedKeys[], __publicKey__?: null } = {};
     if (!vault.public) {
@@ -424,6 +428,8 @@ const formatDates = (state: any) => {
 const getDateFromTimestamp = (timestamp: string): Date => {
   return new Date(JSON.parse(timestamp));
 };
+
+export type Object = Vault | Membership | NodeLike;
 
 export type VaultGetOptions =
   VaultApiGetOptions &
