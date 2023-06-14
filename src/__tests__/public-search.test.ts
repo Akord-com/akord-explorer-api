@@ -11,7 +11,7 @@ describe("Testing explorer api queries", () => {
   });
 
   it("should list all vaults with tag \"podcast\" ", async () => {
-    const vaults = await publicExplorerApi.listAllVaults({ tags: { values: ["podcast"] } });
+    const vaults = await publicExplorerApi.listAllVaults({ tags: { values: ["Health Seychelles"] } });
     console.log(vaults);
   });
 

@@ -197,7 +197,7 @@ export default class ExplorerApi extends Api {
   public async listAllVaults(options: ListOptions = {}): Promise<Array<Vault>> {
     let items: Array<TxNode>;
     if (options.tags) {
-      items = await this.client.paginatedQuery(vaultsByTagsQuery, { tags: options.tags.values });
+      items = await this.client.paginatedQuery(vaultsByTagsQuery, { tags: this.processTags(options.tags.values) });
     } else {
       items = await this.client.paginatedQuery(vaultsQuery, {});
     }
@@ -208,7 +208,7 @@ export default class ExplorerApi extends Api {
         return vault;
       })) as Array<Vault>;
     if (options.tags) {
-      return this.filterByTags<Vault>(options.tags.values, vaults);
+      return this.filterByTags<Vault>(this.processTags(options.tags.values), vaults);
     } else {
       return vaults;
     }
@@ -217,7 +217,7 @@ export default class ExplorerApi extends Api {
   public async listAllNodes<T>(type: NodeType, options: ListOptions = {}): Promise<Array<T>> {
     let items: Array<TxNode>;
     if (options.tags) {
-      items = await this.client.paginatedQuery(nodesByTagsAndTypeQuery, { objectType: type, tags: options.tags.values });
+      items = await this.client.paginatedQuery(nodesByTagsAndTypeQuery, { objectType: type, tags: this.processTags(options.tags.values) });
     } else {
       items = await this.client.paginatedQuery(nodesByTypeQuery, { objectType: type });
     }
@@ -229,7 +229,7 @@ export default class ExplorerApi extends Api {
         return node;
       })) as Array<T>;
     if (options.tags) {
-      return this.filterByTags<T>(options.tags.values, nodes);
+      return this.filterByTags<T>(this.processTags(options.tags.values), nodes);
     } else {
       return nodes as Array<T>;
     }
@@ -305,9 +305,16 @@ export default class ExplorerApi extends Api {
     return object;
   };
 
+  private processTags(tags: string[]): string[] {
+    const processedTags = [] as string[];
+    tags?.map((tag: string) =>
+      tag.split(" ").map((value: string) => processedTags.push(value.toLowerCase())));
+    return processedTags;
+  };
+
   private filterByTags<T>(tags: string[], objects: Array<T>): Array<T> {
     const filteredArray = (<Array<NodeLike | Vault>>objects).filter((object: NodeLike | Vault) =>
-      tags?.every((tag: string) => object.tags?.includes(tag)));
+      tags?.every((tag: string) => this.processTags([object.name].concat(object.tags)).includes(tag)));
     // remove duplicates
     return [...new Map(filteredArray.map(item => [item.id, item])).values()] as Array<T>;
   };
