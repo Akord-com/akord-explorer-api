@@ -11,7 +11,12 @@ describe("Testing explorer api queries", () => {
   });
 
   it("should list all vaults with tag \"podcast\" ", async () => {
-    const vaults = await publicExplorerApi.listAllVaults({ tags: { values: ["Health Seychelles"] } });
+    const vaults = await publicExplorerApi.listAllVaults({
+      tags: {
+        values: ["Health Seychelles Morning dynamic"],
+        searchCriteria: "CONTAINS_SOME"
+      }
+    });
     console.log(vaults);
   });
 

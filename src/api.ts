@@ -208,7 +208,7 @@ export default class ExplorerApi extends Api {
         return vault;
       })) as Array<Vault>;
     if (options.tags) {
-      return this.filterByTags<Vault>(this.processTags(options.tags.values), vaults);
+      return this.filterByTags<Vault>(options.tags, vaults);
     } else {
       return vaults;
     }
@@ -229,7 +229,7 @@ export default class ExplorerApi extends Api {
         return node;
       })) as Array<T>;
     if (options.tags) {
-      return this.filterByTags<T>(this.processTags(options.tags.values), nodes);
+      return this.filterByTags<T>(options.tags, nodes);
     } else {
       return nodes as Array<T>;
     }
@@ -312,9 +312,13 @@ export default class ExplorerApi extends Api {
     return processedTags;
   };
 
-  private filterByTags<T>(tags: string[], objects: Array<T>): Array<T> {
+  private filterByTags<T>(tags: ListOptions["tags"], objects: Array<T>): Array<T> {
+    const processedTags = this.processTags(tags?.values as string[]);
     const filteredArray = (<Array<NodeLike | Vault>>objects).filter((object: NodeLike | Vault) =>
-      tags?.every((tag: string) => this.processTags([object.name].concat(object.tags)).includes(tag)));
+      tags?.searchCriteria === "CONTAINS_SOME"
+        ? processedTags.some((tag: string) => this.processTags([object.name].concat(object.tags)).includes(tag))
+        : processedTags.every((tag: string) => this.processTags([object.name].concat(object.tags)).includes(tag))
+    );
     // remove duplicates
     return [...new Map(filteredArray.map(item => [item.id, item])).values()] as Array<T>;
   };
