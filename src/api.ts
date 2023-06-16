@@ -194,7 +194,7 @@ export default class ExplorerApi extends Api {
     return null;
   };
 
-  public async listAllVaults(options: ListOptions = {}): Promise<Array<Vault>> {
+  public async listAllVaults(options: ExplorerListOptions = {}): Promise<Array<Vault>> {
     let items: Array<TxNode>;
     if (options.tags) {
       items = await this.client.paginatedQuery(vaultsByTagsQuery, { tags: this.processTags(options.tags.values) });
@@ -207,14 +207,10 @@ export default class ExplorerApi extends Api {
         const vault = await this.getVault(vaultId);
         return vault;
       })) as Array<Vault>;
-    if (options.tags) {
-      return this.filterByTags<Vault>(options.tags, vaults);
-    } else {
-      return vaults;
-    }
+    return this.filterByDates<Vault>(options, this.filterByTags<Vault>(options.tags, vaults));
   };
 
-  public async listAllNodes<T>(type: NodeType, options: ListOptions = {}): Promise<Array<T>> {
+  public async listAllNodes<T>(type: NodeType, options: ExplorerListOptions = {}): Promise<Array<T>> {
     let items: Array<TxNode>;
     if (options.tags) {
       items = await this.client.paginatedQuery(nodesByTagsAndTypeQuery, { objectType: type, tags: this.processTags(options.tags.values) });
@@ -228,11 +224,7 @@ export default class ExplorerApi extends Api {
         const node = await this.getNode<T>(nodeId, type, vaultId);
         return node;
       })) as Array<T>;
-    if (options.tags) {
-      return this.filterByTags<T>(options.tags, nodes);
-    } else {
-      return nodes as Array<T>;
-    }
+    return this.filterByDates<T>(options, this.filterByTags<T>(options.tags, nodes));
   };
 
   // The explorer API is read-only, hence the following methods are not implemented
@@ -313,14 +305,28 @@ export default class ExplorerApi extends Api {
   };
 
   private filterByTags<T>(tags: ListOptions["tags"], objects: Array<T>): Array<T> {
-    const processedTags = this.processTags(tags?.values as string[]);
-    const filteredArray = (<Array<NodeLike | Vault>>objects).filter((object: NodeLike | Vault) =>
-      tags?.searchCriteria === "CONTAINS_SOME"
-        ? processedTags.some((tag: string) => this.processTags([object.name].concat(object.tags)).includes(tag))
-        : processedTags.every((tag: string) => this.processTags([object.name].concat(object.tags)).includes(tag))
-    );
-    // remove duplicates
-    return [...new Map(filteredArray.map(item => [item.id, item])).values()] as Array<T>;
+    if (tags) {
+      const processedTags = this.processTags(tags.values as string[]);
+      const filteredArray = (<Array<NodeLike | Vault>>objects).filter((object: NodeLike | Vault) =>
+        tags.searchCriteria === "CONTAINS_SOME"
+          ? processedTags.some((tag: string) => this.processTags([object.name].concat(object.tags)).includes(tag))
+          : processedTags.every((tag: string) => this.processTags([object.name].concat(object.tags)).includes(tag))
+      );
+      // remove duplicates
+      return [...new Map(filteredArray.map(item => [item.id, item])).values()] as Array<T>;
+    } else {
+      return objects;
+    }
+  };
+
+  private filterByDates<T>(options: ExplorerListOptions, objects: Array<T>): Array<T> {
+    const r = (<Array<NodeLike | Vault>>objects).filter((object: NodeLike | Vault) => {
+      return (!options.minCreatedAt || <any>object.createdAt >= options.minCreatedAt)
+        && (!options.maxCreatedAt || <any>object.createdAt <= options.maxCreatedAt)
+        && (!options.minUpdatedAt || <any>object.updatedAt >= options.minUpdatedAt)
+        && (!options.maxUpdatedAt || <any>object.updatedAt <= options.maxUpdatedAt)
+    }) as Array<T>;
+    return r;
   };
 
   private getTagValue(tags: Tags, name: string): string {
@@ -450,6 +456,16 @@ export type VaultGetOptions =
     withStacks?: boolean,
     withMemos?: boolean
   }
+
+export type ExplorerListOptions =
+  ListOptions &
+  {
+    minCreatedAt?: Date,
+    maxCreatedAt?: Date,
+    minUpdatedAt?: Date,
+    maxUpdatedAt?: Date
+  }
+
 
 export {
   ExplorerApi
