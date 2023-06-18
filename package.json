@@ -14,7 +14,7 @@
     "dotenv": "^16.0.1",
     "graphql": "15.7.0",
     "graphql-request": "4.3.0",
-    "warp-contracts": "1.2.13"
+    "warp-contracts": "1.4.12"
   },
   "devDependencies": {
     "@types/jest": "^27.4.0",

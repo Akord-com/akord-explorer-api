@@ -6,36 +6,15 @@ import { ListOptions, VaultApiGetOptions } from "@akord/akord-js/lib/types/query
 import { getTxData, getTxMetadata } from "@akord/akord-js/lib/arweave";
 import { membershipVaultIdQuery, membershipsQuery, nodeVaultIdQuery, nodesByTagsAndTypeQuery, nodesByTypeQuery, nodesQuery, timelineQuery, vaultsByTagsQuery, vaultsQuery } from "./graphql/queries";
 import { ApiClient, TxNode } from "./graphql/client";
-import { WarpFactory, LoggerFactory, DEFAULT_LEVEL_DB_LOCATION, Contract } from "warp-contracts";
 import { EncryptionMetadata } from "@akord/akord-js/lib/core";
 import { NotFound } from "@akord/akord-js/lib/errors/not-found";
 import { Forbidden } from "@akord/akord-js/lib/errors/forbidden";
 import { BadRequest } from "@akord/akord-js/lib/errors/bad-request";
 import { EncryptedKeys } from "@akord/crypto";
 import { ApiConfig, defaultApiConfig, initConfig } from "./config";
-
-// import Arweave from 'arweave';
-// // Set up Arweave client
-// const arweave = Arweave.init({
-//   host: "arweave.net",
-//   port: 443,
-//   protocol: "https"
-// });
+import { readContractState } from "./smartweave";
 
 const DEFAULT_LIMIT = 100, MAX_LIMIT = 100;
-
-// Set up SmartWeave client
-LoggerFactory.INST.logLevel("error");
-const smartweave = WarpFactory.forMainnet({
-  inMemory: true,
-  dbLocation: DEFAULT_LEVEL_DB_LOCATION,
-});
-
-const getContract = (contractId: string): Contract<Vault> => {
-  const contract = smartweave
-    .contract<Vault>(contractId)
-  return contract;
-};
 
 const getLimit = (limit?: number): number => {
   if (limit && limit <= MAX_LIMIT) {
@@ -75,8 +54,7 @@ export default class ExplorerApi extends Api {
   };
 
   public async getVault(id: string, options?: VaultGetOptions): Promise<Vault> {
-    const contract = getContract(id);
-    let vault = (await contract.readState()).cachedValue.state;
+    let vault = await readContractState(id);
     vault = await this.downloadObject(vault);
     if (!vault.public || options?.deep || options?.withMemberships) {
       await this.downloadMemberships(vault);
