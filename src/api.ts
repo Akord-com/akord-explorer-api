@@ -1,6 +1,6 @@
 import { Api } from "@akord/akord-js/lib/api/api";
 import { ContractState, Tag, Tags } from "@akord/akord-js/lib/types/contract";
-import { NodeLike, NodeType, Vault, Membership, MembershipKeys, Transaction } from "@akord/akord-js";
+import { NodeLike, NodeType, Vault, Membership, MembershipKeys, Transaction, Stack, Folder, Memo } from "@akord/akord-js";
 import { Paginated } from "@akord/akord-js/lib/types/paginated";
 import { ListOptions, VaultApiGetOptions } from "@akord/akord-js/lib/types/query-options";
 import { getTxData, getTxMetadata } from "@akord/akord-js/lib/arweave";
@@ -136,7 +136,7 @@ export default class ExplorerApi extends Api {
           vault.keys = membership?.keys;
         }
         return vault;
-      })) as Array<any>;
+      })) as Array<Vault>;
     return { items: vaults, nextToken: nextPage };
   };
 
@@ -174,12 +174,17 @@ export default class ExplorerApi extends Api {
     return null;
   };
 
-  public async listAllVaults(options: ExplorerListOptions = {}): Promise<Array<Vault>> {
+  public async listPublicVaults(options: ExplorerListOptions = {}): Promise<Paginated<Vault>> {
     let items: Array<TxNode>;
+    let nextToken = "null";
     if (options.tags) {
-      items = await this.client.paginatedQuery(vaultsByTagsQuery, { tags: this.processTags(options.tags.values) });
+      const queryResult = await this.client.executeQuery(vaultsByTagsQuery, { tags: this.processTags(options.tags.values), nextToken: options.nextToken });
+      items = queryResult.items;
+      nextToken = queryResult.nextToken;
     } else {
-      items = await this.client.paginatedQuery(vaultsQuery, {});
+      const queryResult = await this.client.executeQuery(vaultsQuery, { nextToken: options.nextToken });
+      items = queryResult.items;
+      nextToken = queryResult.nextToken;
     }
     const vaults = await Promise.all(items
       .map(async (item: TxNode) => {
@@ -187,15 +192,35 @@ export default class ExplorerApi extends Api {
         const vault = await this.getVault(vaultId);
         return vault;
       })) as Array<Vault>;
-    return this.filterByDates<Vault>(options, this.filterByTags<Vault>(options.tags, vaults));
+    return { items: this.filterByDates<Vault>(options, this.filterByTags<Vault>(options.tags, vaults)), nextToken };
   };
 
-  public async listAllNodes<T>(type: NodeType, options: ExplorerListOptions = {}): Promise<Array<T>> {
+  public async listAllPublicVaults(options: ExplorerListOptions = {}): Promise<Array<Vault>> {
+    let nextToken = undefined;
+    let results: Vault[] = [];
+    do {
+      const { items, nextToken: nextPage } = await this.listPublicVaults(options);
+      results = results.concat(items);
+      if (nextPage === "null") {
+        nextToken = undefined;
+      }
+      options.nextToken = nextPage;
+      nextToken = nextPage;
+    } while (nextToken);
+    return results;
+  };
+
+  public async listPublicNodes<T>(type: NodeType, options: ExplorerListOptions = {}): Promise<Paginated<T>> {
     let items: Array<TxNode>;
+    let nextToken = "null";
     if (options.tags) {
-      items = await this.client.paginatedQuery(nodesByTagsAndTypeQuery, { objectType: type, tags: this.processTags(options.tags.values) });
+      const queryResult = await this.client.executeQuery(nodesByTagsAndTypeQuery, { objectType: type, tags: this.processTags(options.tags.values), nextToken: options.nextToken });
+      items = queryResult.items;
+      nextToken = queryResult.nextToken;
     } else {
-      items = await this.client.paginatedQuery(nodesByTypeQuery, { objectType: type });
+      const queryResult = await this.client.executeQuery(nodesByTypeQuery, { objectType: type, nextToken: options.nextToken });
+      items = queryResult.items;
+      nextToken = queryResult.nextToken;
     }
     const nodes = await Promise.all(items
       .map(async (item: TxNode) => {
@@ -204,7 +229,22 @@ export default class ExplorerApi extends Api {
         const node = await this.getNode<T>(nodeId, type, vaultId);
         return node;
       })) as Array<T>;
-    return this.filterByDates<T>(options, this.filterByTags<T>(options.tags, nodes));
+    return { items: this.filterByDates<T>(options, this.filterByTags<T>(options.tags, nodes)), nextToken };
+  };
+
+  public async listAllPublicNodes<T>(type: NodeType, options: ExplorerListOptions = {}): Promise<Array<T>> {
+    let nextToken = undefined;
+    let results: T[] = [];
+    do {
+      const { items, nextToken: nextPage } = await this.listPublicNodes<T>(type, options);
+      results = results.concat(items);
+      if (nextPage === "null") {
+        nextToken = undefined;
+      }
+      options.nextToken = nextPage;
+      nextToken = nextPage;
+    } while (nextToken);
+    return results;
   };
 
   // The explorer API is read-only, hence the following methods are not implemented

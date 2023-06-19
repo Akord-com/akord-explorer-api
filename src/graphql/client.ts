@@ -17,7 +17,6 @@ export class ApiClient {
     variables.protocolName = this.config.protocolName;
     try {
       const result = await this.client.request(query, variables) as GraphQLResult;
-      console.log(result)
       let nextToken = undefined as any;
       const hasNextPage = result?.transactions?.pageInfo?.hasNextPage;
       if (hasNextPage) {
