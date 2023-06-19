@@ -13,6 +13,7 @@ import { BadRequest } from "@akord/akord-js/lib/errors/bad-request";
 import { EncryptedKeys } from "@akord/crypto";
 import { ApiConfig, defaultApiConfig, initConfig } from "./config";
 import { readContractState } from "./smartweave";
+import { Logger } from "./logger";
 
 const DEFAULT_LIMIT = 100, MAX_LIMIT = 100;
 
@@ -32,6 +33,7 @@ export default class ExplorerApi extends Api {
   constructor(config: ApiConfig = defaultApiConfig) {
     super();
     this.config = initConfig(config);
+    Logger.debug = this.config.debug ? this.config.debug : false;
     this.client = new ApiClient(this.config);
   }
 

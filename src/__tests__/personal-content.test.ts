@@ -16,8 +16,8 @@ const publicStackId = "ffe5df0b-5523-4c6e-9190-9d104b526402";
 describe("Testing explorer api queries", () => {
   beforeAll(async () => {
     const wallet = await AkordWallet.importFromBackupPhrase(backupPhrase);
-    explorerApi = new ExplorerApi({ address: await wallet.getAddress() });
-    akord = await Akord.init(wallet, { api: explorerApi });
+    explorerApi = new ExplorerApi({ address: await wallet.getAddress(), debug: true });
+    akord = await Akord.init(wallet, { api: explorerApi, debug: true });
   });
 
   it("should list vaults", async () => {

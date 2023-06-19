@@ -7,7 +7,7 @@ jest.setTimeout(3000000);
 
 describe("Testing explorer api queries", () => {
   beforeAll(async () => {
-    publicExplorerApi = new ExplorerApi();
+    publicExplorerApi = new ExplorerApi({ debug: true });
   });
 
   it("should list all vaults with tag \"podcast\" ", async () => {
