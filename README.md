@@ -25,10 +25,15 @@ import { Stack } from "@akord/akord-js";
 import { ExplorerApi } from "@akord/akord-explorer-api";
 
 const explorerApi = new ExplorerApi();
-// list all public vaults with "podcast" tag
-const vaults = explorerApi.listAllVaults({ tags: { values: ["podcast"] } });
-// list all public file stacks
-const stacks = await explorerApi.listAllNodes<Stack>("Stack");
+// list all public vaults with at least one word/tag within the given list
+const vaults = explorerApi.listAllPublicVaults({
+  tags: {
+    values: ["Health Seychelles Morning dynamic"],
+    searchCriteria: "CONTAINS_SOME"
+  }
+});
+// list all Akord public folders
+const folders = await explorerApi.listAllPublicNodes<Folder>("Folder");
 ```
 
 ## Development
