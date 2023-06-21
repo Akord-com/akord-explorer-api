@@ -1,6 +1,6 @@
 import { Api } from "@akord/akord-js/lib/api/api";
 import { ContractState, Tag, Tags } from "@akord/akord-js/lib/types/contract";
-import { NodeLike, NodeType, Vault, Membership, MembershipKeys, Transaction, Stack, Folder, Memo } from "@akord/akord-js";
+import { NodeLike, NodeType, Vault, Membership, MembershipKeys, Transaction, Stack, Folder, Memo, Node } from "@akord/akord-js";
 import { Paginated } from "@akord/akord-js/lib/types/paginated";
 import { ListOptions, VaultApiGetOptions } from "@akord/akord-js/lib/types/query-options";
 import { getTxData, getTxMetadata } from "@akord/akord-js/lib/arweave";
@@ -190,7 +190,7 @@ export default class ExplorerApi extends Api {
       .map(async (item: TxNode) => {
         const vaultId = this.getTagValue(item.tags, "Contract");
         const vault = await this.getVault(vaultId);
-        return vault;
+        return new Vault(vault, []);
       })) as Array<Vault>;
     return { items: this.filterByDates<Vault>(options, this.filterByTags<Vault>(options.tags, vaults)), nextToken };
   };
@@ -209,8 +209,7 @@ export default class ExplorerApi extends Api {
     } while (nextToken);
     return results;
   };
-
-  public async listPublicNodes<T>(type: NodeType, options: ExplorerListOptions = {}): Promise<Paginated<T>> {
+  public async listPublicNodes<T extends Node>(type: NodeType, options: ExplorerListOptions = {}): Promise<Paginated<T>> {
     let items: Array<TxNode>;
     let nextToken = "null";
     if (options.tags) {
@@ -227,12 +226,21 @@ export default class ExplorerApi extends Api {
         const vaultId = this.getTagValue(item.tags, "Contract");
         const nodeId = this.getTagValue(item.tags, "Node-Id");
         const node = await this.getNode<T>(nodeId, type, vaultId);
-        return node;
+        // TODO: use a generic NodeLike constructor
+        if (type === "Folder") {
+          return new Folder(node, []);
+        } else if (type === "Stack") {
+          return new Stack(node, []);
+        } else if (type === "Memo") {
+          return new Memo(node, []);
+        } else {
+          return node;
+        }
       })) as Array<T>;
     return { items: this.filterByDates<T>(options, this.filterByTags<T>(options.tags, nodes)), nextToken };
   };
 
-  public async listAllPublicNodes<T>(type: NodeType, options: ExplorerListOptions = {}): Promise<Array<T>> {
+  public async listAllPublicNodes<T extends Node>(type: NodeType, options: ExplorerListOptions = {}): Promise<Array<T>> {
     let nextToken = undefined;
     let results: T[] = [];
     do {
