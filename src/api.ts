@@ -14,6 +14,7 @@ import { EncryptedKeys } from "@akord/crypto";
 import { ApiConfig, defaultApiConfig, initConfig } from "./config";
 import { readContractState } from "./smartweave";
 import { Logger } from "./logger";
+import { status } from "@akord/akord-js/lib/constants";
 
 const DEFAULT_LIMIT = 100, MAX_LIMIT = 100;
 
@@ -192,7 +193,7 @@ export default class ExplorerApi extends Api {
         const vault = await this.getVault(vaultId);
         return new Vault(vault, []);
       })) as Array<Vault>;
-    return { items: this.filterByDates<Vault>(options, this.filterByTags<Vault>(options.tags, vaults)), nextToken };
+    return { items: this.filterByDates<Vault>(options, this.filterByTags<Vault>(options.tags, vaults.filter((vault: Vault) => vault.status === status.ACTIVE))), nextToken };
   };
 
   public async listAllPublicVaults(options: ExplorerListOptions = {}): Promise<Array<Vault>> {
@@ -237,7 +238,7 @@ export default class ExplorerApi extends Api {
           return node;
         }
       })) as Array<T>;
-    return { items: this.filterByDates<T>(options, this.filterByTags<T>(options.tags, nodes)), nextToken };
+    return { items: this.filterByDates<T>(options, this.filterByTags<T>(options.tags, nodes.filter((node: T) => node.status === status.ACTIVE))), nextToken };
   };
 
   public async listAllPublicNodes<T extends Node>(type: NodeType, options: ExplorerListOptions = {}): Promise<Array<T>> {
