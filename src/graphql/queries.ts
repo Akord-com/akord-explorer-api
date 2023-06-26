@@ -294,7 +294,7 @@ query nodesByTagsAndType($tags: [String!]!, $objectType: String!, $protocolName:
         },
         {
           name: "Function-Name",
-          values: ["vault:init", "vault:update"]
+          values: ["node:create", "node:update"]
         },
         {
           name: "Protocol-Name",
