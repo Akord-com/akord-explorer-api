@@ -131,29 +131,36 @@ export default class ExplorerApi extends Api {
     const vaults = await Promise.all(items
       .map(async (item: TxNode) => {
         const vaultId = this.getTagValue(item.tags, "Contract");
-        const vault = await this.getVault(vaultId, { withMemberships: true });
-        if (!vault.public) {
-          const membership = this.getCurrentMember(vault.memberships);
-          vault.keys = membership?.keys;
+        try {
+          const vault = await this.getVault(vaultId, { withMemberships: true });
+          vault.keys = vault.__keys__;
+          return vault;
+        } catch (error) {
+          if (error instanceof Forbidden) {
+            // user is no longer a valid vault member
+            return null;
+          }
+          throw error;
         }
-        return vault;
       })) as Array<Vault>;
-    return { items: vaults, nextToken: nextPage };
+    return { items: this.filterByStatus(options.filter, vaults.filter((vault: Vault) => vault !== null)), nextToken: nextPage };
   };
 
   public async getNodesByVaultId<T>(vaultId: string, type: NodeType, options: ListOptions): Promise<Paginated<T>> {
     const vault = await this.getVault(vaultId, { ["with" + type + "s"]: true, withMemberships: true });
+    const nodes = vault[type.toLowerCase() + "s"] as Array<T>;
     return {
-      items: vault[type.toLowerCase() + "s"] as Array<T>,
-      nextToken: "null"
+      items: this.filterByStatus(options.filter, nodes),
+      nextToken: "null" // TODO: implement pagination
     };
   };
 
   public async getMembershipsByVaultId(vaultId: string, options: ListOptions): Promise<Paginated<Membership>> {
     const vault = await this.getVault(vaultId, { withMemberships: true });
+    const memberships = vault.memberships as Array<Membership>;
     return {
-      items: vault.memberships as Array<Membership>,
-      nextToken: "null"
+      items: this.filterByStatus(options.filter, memberships),
+      nextToken: "null" // TODO: implement pagination
     };
   };
 
@@ -356,6 +363,30 @@ export default class ExplorerApi extends Api {
         && (!options.maxUpdatedAt || <any>object.updatedAt <= options.maxUpdatedAt)
     }) as Array<T>;
     return r;
+  };
+
+  private filterByStatus<T>(filter: ListOptions["filter"], objects: Array<T>): Array<T> {
+    const validStatus = [] as Array<string>;
+    if (filter) {
+      if ((<any>filter).status?.eq) {
+        validStatus.push((<any>filter).status?.eq);
+      }
+      if ((<any>filter).or) {
+        (<any>filter).or.map((pred: any) => {
+          if (pred.status?.eq) {
+            validStatus.push(pred.status?.eq);
+          }
+        })
+      }
+      if (validStatus.length === 0 || validStatus.includes(status.ACCEPTED)) {
+        validStatus.push(status.ACTIVE);
+      }
+      return (<Array<NodeLike | Vault>>objects).filter((object: NodeLike | Vault) =>
+        validStatus.includes(object.status)
+      ) as Array<T>;
+    } else {
+      return objects;
+    }
   };
 
   private getTagValue(tags: Tags, name: string): string {
