@@ -506,7 +506,8 @@ export default class ExplorerApi extends Api {
       }
     }
     const input = this.getTagValue(item.tags, "Input");
-    return JSON.parse(input).parentId;
+    const parentId = JSON.parse(input).parentId;
+    return parentId ? parentId : null;
   }
 
 
