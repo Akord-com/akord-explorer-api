@@ -651,7 +651,7 @@ query membershipLastUpdateQuery($membershipId: String!, $protocolName: String!) 
         },
         {
           name: "Function-Name",
-          values: ["membership:invite", "membership:add", "membership:revoke", "membership:add", "membership:accept", "membership:update"]
+          values: ["vault:init", "membership:invite", "membership:add", "membership:revoke", "membership:add", "membership:accept", "membership:update"]
         },
         {
           name: "Protocol-Name",
