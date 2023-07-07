@@ -3,6 +3,8 @@ import { ApiConfig } from "../config";
 import { Logger } from "../logger";
 import { InternalError } from "@akord/akord-js/lib/errors/internal-error";
 
+const RETRY_MAX = 5;
+
 export class ApiClient {
 
   client: GraphQLClient;
@@ -15,20 +17,31 @@ export class ApiClient {
 
   public async executeQuery(query: any, variables: any): Promise<{ items: TxNode[], nextToken: string }> {
     variables.protocolName = this.config.protocolName;
-    try {
-      const result = await this.client.request(query, variables) as GraphQLResult;
-      let nextToken = undefined as any;
-      const hasNextPage = result?.transactions?.pageInfo?.hasNextPage;
-      if (hasNextPage) {
-        nextToken = result?.transactions?.edges?.[result.transactions.edges.length - 1].cursor;
+    let retryCount = 0;
+    while (retryCount < RETRY_MAX) {
+      try {
+        const result = await this.client.request(query, variables) as GraphQLResult;
+        let nextToken = undefined as any;
+        const hasNextPage = result?.transactions?.pageInfo?.hasNextPage;
+        if (hasNextPage) {
+          nextToken = result?.transactions?.edges?.[result.transactions.edges.length - 1].cursor;
+        }
+        const items = (result?.transactions.edges || []).map((edge: Edge) => edge.node);
+        return { items, nextToken };
+      } catch (error: any) {
+        Logger.log(error);
+        Logger.log(error.message);
+        if (error?.response?.status === 504) {
+          Logger.log("Retrying...");
+          retryCount++;
+          Logger.log("Retry count: " + retryCount);
+        } else {
+          throw new InternalError("Cannot satisfy the request. Try again later, or contact the app or website owner.");
+        }
       }
-      const items = (result?.transactions.edges || []).map((edge: Edge) => edge.node);
-      return { items, nextToken };
-    } catch (error: any) {
-      Logger.log(error);
-      Logger.log(error.message);
-      throw new InternalError("Cannot satisfy the request. Try again later, or contact the app or website owner.");
     }
+    Logger.log(`Request failed after ${RETRY_MAX} attempts.`);
+    throw new InternalError("Cannot satisfy the request. Try again later, or contact the app or website owner.");
   }
 
   public async paginatedQuery(query: any, variables: any): Promise<TxNode[]> {
