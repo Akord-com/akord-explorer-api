@@ -181,7 +181,7 @@ export default class ExplorerApi extends Api {
       throw new BadRequest("Missing wallet address in api configuration.");
     }
     const { items, nextToken: nextPage } = await this.client.executeQuery(membershipsByAddressQuery,
-      { address: this.config.address, nextToken: options.nextToken, first: getLimit(options.limit) });
+      { address: this.config.address, nextToken: options.nextToken, limit: getLimit(options.limit) });
     const memberships = await Promise.all(items
       .map(async (item: TxNode) => {
         const membershipId = this.getTagValue(item.tags, "Membership-Id");
@@ -196,7 +196,7 @@ export default class ExplorerApi extends Api {
       throw new BadRequest("Missing wallet address in api configuration.");
     }
     const { items, nextToken: nextPage } = await this.client.executeQuery(membershipsByAddressQuery,
-      { address: this.config.address, nextToken: options.nextToken, first: getLimit(options.limit) });
+      { address: this.config.address, nextToken: options.nextToken, limit: getLimit(options.limit) });
     const vaults = await Promise.all(items
       .map(async (item: TxNode) => {
         const vaultId = this.getTagValue(item.tags, "Contract");
@@ -217,7 +217,7 @@ export default class ExplorerApi extends Api {
 
   public async getNodesByVaultId<T>(vaultId: string, type: NodeType, options: ListOptions): Promise<Paginated<T>> {
     const { items, nextToken: nextPage } = await this.client.executeQuery(nodesByVaultIdAndTypeQuery,
-      { vaultId, type, nextToken: options.nextToken, first: getLimit(options.limit) });
+      { vaultId, type, nextToken: options.nextToken, limit: getLimit(options.limit) });
     const nodes = await Promise.all(items
       .map(async (item: TxNode) => {
         const nodeId = this.getTagValue(item.tags, "Node-Id");
@@ -229,7 +229,7 @@ export default class ExplorerApi extends Api {
 
   public async getMembershipsByVaultId(vaultId: string, options: ListOptions): Promise<Paginated<Membership>> {
     const { items, nextToken: nextPage } = await this.client.executeQuery(membershipsByVaultIdQuery,
-      { vaultId, nextToken: options.nextToken, first: getLimit(options.limit) });
+      { vaultId, nextToken: options.nextToken, limit: getLimit(options.limit) });
     const memberships = await Promise.all(items
       .map(async (item: TxNode) => {
         const membershipId = this.getTagValue(item.tags, "Membership-Id");

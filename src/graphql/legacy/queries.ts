@@ -53,8 +53,11 @@ query transactionsByVaultId($vaultId: String!, $protocolName: String!) {
     `;
 
 const membershipsByAddressQuery = gql`
-query membershipsByAddress($address: String!, $protocolName: String!) {
-  transactions(
+    query membershipsByAddress($address: String!, $protocolName: String!, $limit: Int, $nextToken: String) {
+      transactions(
+        sort: HEIGHT_ASC,
+        first: $limit,
+        after: $nextToken,
       tags: [
         {
           name: "Member-Address",
@@ -83,9 +86,11 @@ query membershipsByAddress($address: String!, $protocolName: String!) {
     `;
 
 const nodesByVaultIdAndTypeQuery = gql`
-query nodesByVaultIdAndType($vaultId: String!, $type: String!, $protocolName: String!) {
+query nodesByVaultIdAndType($vaultId: String!, $type: String!, $protocolName: String!, $limit: Int, $nextToken: String) {
   transactions(
       sort: HEIGHT_ASC,
+      first: $limit,
+      after: $nextToken,
       tags: [
         {
           name: "Vault-Id",
@@ -123,8 +128,11 @@ query nodesByVaultIdAndType($vaultId: String!, $type: String!, $protocolName: St
 `;
 
 const membershipsByVaultIdQuery = gql`
-query membershipsByVaultId($vaultId: String!, $protocolName: String!) {
+query membershipsByVaultId($vaultId: String!, $protocolName: String!, $limit: Int, $nextToken: String) {
   transactions(
+    sort: HEIGHT_ASC,
+    first: $limit,
+    after: $nextToken,
       tags: [
         {
           name: "Vault-Id",
@@ -268,7 +276,7 @@ query listPublicNodesByTypeQuery($type: String!, $protocolName: String!) {
     `;
 
 const nodesByTagsAndTypeQuery = gql`
-query nodesByTagsAndType($tags: [String!]!, $objectType: String!, $protocolName: String!) {
+query nodesByTagsAndType($tags: [String!]!, $type: String!, $protocolName: String!) {
   transactions(
       tags: [
         {
@@ -289,7 +297,7 @@ query nodesByTagsAndType($tags: [String!]!, $objectType: String!, $protocolName:
         },
         {
           name: "Node-Type",
-          values: [$objectType]
+          values: [$type]
         }
       ]
       ) {
