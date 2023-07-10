@@ -21,14 +21,20 @@ const TxNode = gql`
 const transactionsByVaultIdQuery = gql`
 query transactionsByVaultId($vaultId: String!, $protocolName: String!) {
   transactions(
+      sort: HEIGHT_DESC,
+      first: 100,
       tags: [
         {
           name: "App-Name",
           values: ["SmartWeaveAction"]
         },
         {
-          name: "Contract",
+          name: "Vault-Id",
           values: [$vaultId]
+        },
+        {
+          name:"Command"
+          values: ["vault:init", "vault:update", "vault:archive", "vault:restore"]
         },
         {
           name: "Protocol-Name",
@@ -51,6 +57,86 @@ query transactionsByVaultId($vaultId: String!, $protocolName: String!) {
         }      }
     }
     `;
+
+const transactionsByNodeIdQuery = gql`
+query transactionsByNodeId($nodeId: String!, $protocolName: String!) {
+  transactions(
+      sort: HEIGHT_DESC,
+      first: 100,
+      tags: [
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
+        },
+        {
+          name: "Node-Id",
+          values: [$nodeId]
+        },
+        {
+          name:"Command"
+          values: ["node:create", "node:update", "node:revoke", "node:restore", "node:move"]
+        },
+        {
+          name: "Protocol-Name",
+          values: [$protocolName, "Akord-Test"]
+        }
+      ]
+      ) {
+        edges {
+          cursor
+          node {
+              id
+              tags {
+                name
+                value
+              }
+          }
+        }
+        pageInfo {
+          hasNextPage
+        }      }
+    }
+    `;
+
+const transactionsByMembershipIdQuery = gql`
+    query transactionsByMembershipId($membershipId: String!, $protocolName: String!) {
+      transactions(
+          sort: HEIGHT_DESC,
+          first: 100,
+          tags: [
+            {
+              name: "App-Name",
+              values: ["SmartWeaveAction"]
+            },
+            {
+              name: "Membership-Id",
+              values: [$membershipId]
+            },
+            {
+              name:"Command"
+              values: ["vault:init", "membership:invite", "membership:add", "membership:revoke", "membership:add", "membership:accept", "membership:update", "membership:key-rotate"]
+            },
+            {
+              name: "Protocol-Name",
+              values: [$protocolName, "Akord-Test"]
+            }
+          ]
+          ) {
+            edges {
+              cursor
+              node {
+                  id
+                  tags {
+                    name
+                    value
+                  }
+              }
+            }
+            pageInfo {
+              hasNextPage
+            }      }
+        }
+        `;
 
 const membershipsByAddressQuery = gql`
     query membershipsByAddress($address: String!, $protocolName: String!, $limit: Int, $nextToken: String) {
@@ -829,6 +915,8 @@ query membershipStatusQuery($membershipId: String!, $protocolName: String!) {
 
 export {
   transactionsByVaultIdQuery,
+  transactionsByNodeIdQuery,
+  transactionsByMembershipIdQuery,
   membershipsByAddressQuery,
   nodesByVaultIdAndTypeQuery,
   membershipsByVaultIdQuery,
