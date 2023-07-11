@@ -53,7 +53,7 @@ query transactionsByContract($vaultId: String!, $protocolName: String!) {
     `;
 
 const transactionsByVaultIdQuery = gql`
-query transactionsByVaultId($vaultId: String!, $protocolName: String!) {
+query transactionsByVaultId($id: String!, $protocolName: String!) {
   transactions(
       sort: HEIGHT_DESC,
       first: 100,
@@ -64,7 +64,7 @@ query transactionsByVaultId($vaultId: String!, $protocolName: String!) {
         },
         {
           name: "Vault-Id",
-          values: [$vaultId]
+          values: [$id]
         },
         {
           name:"Function-Name"
@@ -93,7 +93,7 @@ query transactionsByVaultId($vaultId: String!, $protocolName: String!) {
     `;
 
 const transactionsByNodeIdQuery = gql`
-query transactionsByNodeId($nodeId: String!, $protocolName: String!) {
+query transactionsByNodeId($id: String!, $protocolName: String!) {
   transactions(
       sort: HEIGHT_DESC,
       first: 100,
@@ -104,7 +104,7 @@ query transactionsByNodeId($nodeId: String!, $protocolName: String!) {
         },
         {
           name: "Node-Id",
-          values: [$nodeId]
+          values: [$id]
         },
         {
           name:"Function-Name"
@@ -133,7 +133,7 @@ query transactionsByNodeId($nodeId: String!, $protocolName: String!) {
     `;
 
 const transactionsByMembershipIdQuery = gql`
-    query transactionsByMembershipId($membershipId: String!, $protocolName: String!) {
+    query transactionsByMembershipId($id: String!, $protocolName: String!) {
       transactions(
           sort: HEIGHT_DESC,
           first: 100,
@@ -144,7 +144,7 @@ const transactionsByMembershipIdQuery = gql`
             },
             {
               name: "Membership-Id",
-              values: [$membershipId]
+              values: [$id]
             },
             {
               name:"Function-Name"
@@ -485,14 +485,14 @@ query nodesByTagsAndType($tags: [String!]!, $type: String!, $protocolName: Strin
     `;
 
 const vaultDataQuery = gql`
-query vaultDataQuery($vaultId: String!, $protocolName: String!) {
+query vaultDataQuery($id: String!, $protocolName: String!) {
   transactions(
       sort: HEIGHT_DESC,
       first: 1,
       tags: [
         {
           name: "Vault-Id",
-          values: [$vaultId]
+          values: [$id]
         },
         {
           name: "Function-Name",
@@ -521,14 +521,14 @@ query vaultDataQuery($vaultId: String!, $protocolName: String!) {
     `;
 
 const nodeDataQuery = gql`
-query nodeDataQuery($nodeId: String!, $protocolName: String!) {
+query nodeDataQuery($id: String!, $protocolName: String!) {
   transactions(
     sort: HEIGHT_DESC,
     first: 1,
       tags: [
         {
           name: "Node-Id",
-          values: [$nodeId]
+          values: [$id]
         },
         {
           name: "Function-Name",
@@ -557,14 +557,14 @@ query nodeDataQuery($nodeId: String!, $protocolName: String!) {
     `;
 
 const membershipDataQuery = gql`
-query membershipQuery($membershipId: String!, $protocolName: String!) {
+query membershipQuery($id: String!, $protocolName: String!) {
   transactions(
     sort: HEIGHT_DESC,
     first: 1,
       tags: [
         {
           name: "Membership-Id",
-          values: [$membershipId]
+          values: [$id]
         },
         {
           name: "Function-Name",
@@ -633,14 +633,14 @@ query membershipQuery($address: String!, $vaultId: String!, $protocolName: Strin
     `;
 
 const nodeStatusQuery = gql`
-query nodeStatusQuery($nodeId: String!, $protocolName: String!) {
+query nodeStatusQuery($id: String!, $protocolName: String!) {
   transactions(
     sort: HEIGHT_DESC,
     first: 1,
       tags: [
         {
           name: "Node-Id",
-          values: [$nodeId]
+          values: [$id]
         },
         {
           name: "Function-Name",
@@ -670,14 +670,14 @@ query nodeStatusQuery($nodeId: String!, $protocolName: String!) {
 
 
 const nodeParentIdQuery = gql`
-query nodeParentIdQuery($nodeId: String!, $protocolName: String!) {
+query nodeParentIdQuery($id: String!, $protocolName: String!) {
   transactions(
     sort: HEIGHT_DESC,
     first: 1,
       tags: [
         {
           name: "Node-Id",
-          values: [$nodeId]
+          values: [$id]
         },
         {
           name: "Function-Name",
@@ -707,14 +707,14 @@ query nodeParentIdQuery($nodeId: String!, $protocolName: String!) {
 
 
 const vaultStatusQuery = gql`
-query vaultStatusQuery($vaultId: String!, $protocolName: String!) {
+query vaultStatusQuery($id: String!, $protocolName: String!) {
   transactions(
     sort: HEIGHT_DESC,
     first: 1,
       tags: [
         {
           name: "Vault-Id",
-          values: [$vaultId]
+          values: [$id]
         },
         {
           name: "Function-Name",
@@ -743,14 +743,14 @@ query vaultStatusQuery($vaultId: String!, $protocolName: String!) {
     `;
 
 const vaultLastUpdateQuery = gql`
-query vaultLastUpdateQuery($vaultId: String!, $protocolName: String!) {
+query vaultLastUpdateQuery($id: String!, $protocolName: String!) {
   transactions(
     sort: HEIGHT_DESC,
     first: 1,
       tags: [
         {
           name: "Vault-Id",
-          values: [$vaultId]
+          values: [$id]
         },
         {
           name: "Function-Name",
@@ -779,14 +779,14 @@ query vaultLastUpdateQuery($vaultId: String!, $protocolName: String!) {
     `;
 
 const nodeLastUpdateQuery = gql`
-query nodeLastUpdateQuery($nodeId: String!, $protocolName: String!) {
+query nodeLastUpdateQuery($id: String!, $protocolName: String!) {
   transactions(
     sort: HEIGHT_DESC,
     first: 1,
       tags: [
         {
           name: "Node-Id",
-          values: [$nodeId]
+          values: [$id]
         },
         {
           name: "Function-Name",
@@ -815,14 +815,14 @@ query nodeLastUpdateQuery($nodeId: String!, $protocolName: String!) {
     `;
 
 const membershipLastUpdateQuery = gql`
-query membershipLastUpdateQuery($membershipId: String!, $protocolName: String!) {
+query membershipLastUpdateQuery($id: String!, $protocolName: String!) {
   transactions(
     sort: HEIGHT_DESC,
     first: 1,
       tags: [
         {
           name: "Membership-Id",
-          values: [$membershipId]
+          values: [$id]
         },
         {
           name: "Function-Name",
@@ -851,14 +851,14 @@ query membershipLastUpdateQuery($membershipId: String!, $protocolName: String!) 
     `;
 
 const vaultCreationQuery = gql`
-query vaultCreationQuery($vaultId: String!, $protocolName: String!) {
+query vaultCreationQuery($id: String!, $protocolName: String!) {
   transactions(
     sort: HEIGHT_DESC,
     first: 1,
       tags: [
         {
           name: "Vault-Id",
-          values: [$vaultId]
+          values: [$id]
         },
         {
           name: "Function-Name",
@@ -887,14 +887,14 @@ query vaultCreationQuery($vaultId: String!, $protocolName: String!) {
     `;
 
 const nodeCreationQuery = gql`
-query nodeCreationQuery($nodeId: String!, $protocolName: String!) {
+query nodeCreationQuery($id: String!, $protocolName: String!) {
   transactions(
     sort: HEIGHT_DESC,
     first: 1,
       tags: [
         {
           name: "Node-Id",
-          values: [$nodeId]
+          values: [$id]
         },
         {
           name: "Function-Name",
@@ -923,14 +923,14 @@ query nodeCreationQuery($nodeId: String!, $protocolName: String!) {
     `;
 
 const membershipCreationQuery = gql`
-query membershipCreationQuery($membershipId: String!, $protocolName: String!) {
+query membershipCreationQuery($id: String!, $protocolName: String!) {
   transactions(
     sort: HEIGHT_DESC,
     first: 1,
       tags: [
         {
           name: "Membership-Id",
-          values: [$membershipId]
+          values: [$id]
         },
         {
           name: "Function-Name",
@@ -959,14 +959,14 @@ query membershipCreationQuery($membershipId: String!, $protocolName: String!) {
     `;
 
 const membershipStatusQuery = gql`
-query membershipStatusQuery($membershipId: String!, $protocolName: String!) {
+query membershipStatusQuery($id: String!, $protocolName: String!) {
   transactions(
     sort: HEIGHT_DESC,
     first: 1,
       tags: [
         {
           name: "Membership-Id",
-          values: [$membershipId]
+          values: [$id]
         },
         {
           name: "Function-Name",
