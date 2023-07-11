@@ -248,6 +248,52 @@ query nodesByVaultIdAndType($vaultId: String!, $type: String!, $protocolName: St
 }
 `;
 
+const nodesByParentIdAndTypeQuery = gql`
+query nodesByParentIdAndType($parentId: String!, $vaultId: String!, $type: String!, $protocolName: String!, $limit: Int, $nextToken: String) {
+  transactions(
+      sort: HEIGHT_ASC,
+      first: $limit,
+      after: $nextToken,
+      tags: [
+        {
+          name: "Parent-Id",
+          values: [$parentId]
+        },
+        {
+          name: "Vault-Id",
+          values: [$vaultId]
+        },
+        {
+          name: "Node-Type",
+          values: [$type]
+        },
+        {
+          name:"Function-Name"
+          values: ["node:create", "node:move"]
+        },
+        {
+          name: "Protocol-Name",
+          values: [$protocolName, "Akord-Test"]
+        }
+      ]
+  ) {
+    edges {
+      cursor
+      node {
+          id
+          tags {
+            name
+            value
+          }
+      }
+    }
+    pageInfo {
+      hasNextPage
+    }
+  }
+}
+`;
+
 const membershipsByVaultIdQuery = gql`
 query membershipsByVaultId($vaultId: String!, $protocolName: String!, $limit: Int, $nextToken: String) {
   transactions(
@@ -955,6 +1001,7 @@ export {
   transactionsByMembershipIdQuery,
   membershipsByAddressQuery,
   nodesByVaultIdAndTypeQuery,
+  nodesByParentIdAndTypeQuery,
   membershipsByVaultIdQuery,
   vaultsByTagsQuery,
   listPublicVaultsQuery,

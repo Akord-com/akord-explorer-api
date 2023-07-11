@@ -196,16 +196,26 @@ export default class ExplorerApi extends Api {
   };
 
   public async getNodesByVaultId<T>(vaultId: string, type: NodeType, options: ListOptions): Promise<Paginated<T>> {
-    const { items, nextToken: nextPage } = await this.client.executeQuery(queries.nodesByVaultIdAndTypeQuery,
-      { vaultId, type, nextToken: options.nextToken, limit: getLimit(options.limit) });
+    let items: TxNode[], nextToken: string;
+    if (options.parentId && options.parentId !== "null") {
+      const result = await this.client.executeQuery(queries.nodesByParentIdAndTypeQuery,
+        { parentId: options.parentId, vaultId, type, nextToken: options.nextToken, limit: getLimit(options.limit) });
+      items = result.items;
+      nextToken = result.nextToken;
+    } else {
+      const result = await this.client.executeQuery(queries.nodesByVaultIdAndTypeQuery,
+        { vaultId, type, nextToken: options.nextToken, limit: getLimit(options.limit) });
+      items = result.items;
+      nextToken = result.nextToken;
+    }
     const vaultContext = await this.getVaultContext(vaultId);
     const nodes = await Promise.all(items
       .map(async (item: TxNode) => {
         const nodeId = this.getTagValue(item.tags, "Node-Id");
         const node = await this.getNodeProto(nodeId);
-        return nodeLikeFactory(formatDates(node), type, vaultContext) as unknown as T;
+        return nodeLikeFactory(formatDates(node), type, vaultContext) as T;
       })) as Array<T>;
-    return { items: this.filterByStatus(options.filter, nodes), nextToken: nextPage };
+    return { items: this.filterByStatus(options.filter, nodes), nextToken };
   };
 
   public async getMembershipsByVaultId(vaultId: string, options: ListOptions): Promise<Paginated<Membership>> {
@@ -757,7 +767,6 @@ export type ExplorerListOptions =
     minUpdatedAt?: Date,
     maxUpdatedAt?: Date
   }
-
 
 export {
   ExplorerApi
