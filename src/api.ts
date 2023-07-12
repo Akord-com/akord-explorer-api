@@ -15,6 +15,7 @@ import { EncryptedKeys } from "@akord/crypto";
 import { ApiConfig, defaultApiConfig, initConfig } from "./config";
 import { Logger } from "./logger";
 import { status, functions, protocolTags, smartweaveTags } from "@akord/akord-js/lib/constants";
+import { readContractState } from "./smartweave";
 
 const DEFAULT_LIMIT = 100, MAX_LIMIT = 100;
 
@@ -127,6 +128,9 @@ export default class ExplorerApi extends Api {
   };
 
   public async getVault(id: string, options?: VaultGetOptions): Promise<Vault> {
+    if (options?.deep || options?.withMemberships || options?.withStacks || options?.withFolders || options?.withMemos) {
+      return await this.getContractState(id, options);
+    }
     const vaultProto = await this.getVaultProto(id);
     let keys: EncryptedKeys[] = [];
     if (!vaultProto.public) {
@@ -150,18 +154,102 @@ export default class ExplorerApi extends Api {
   public async getNodeState(stateId: string | undefined): Promise<any> {
     if (!stateId) return null;
     try {
+      Logger.log("[ExplorerApi] Getting state: " + stateId);
       const result = await getTxData(stateId, "json");
       return result;
     } catch (error) {
+      Logger.log(error);
       if (error === 404 || (<any>error)?.response?.status === 404) {
         throw new NotFound("Cannot find state: " + stateId);
       }
     }
   };
 
-  public async getContractState(objectId: string): Promise<ContractState> {
-    return <any>this.getVault(objectId, { deep: true });
+  public async getContractState(id: string, options?: VaultGetOptions): Promise<ContractState> {
+    let vault = await readContractState(id);
+    vault = await this.downloadObject(vault);
+    if (!vault.public || options?.deep || options?.withMemberships) {
+      await this.downloadMemberships(vault);
+    }
+    if (options?.deep || options?.withStacks) {
+      await this.downloadNodes(vault, "Stack");
+    }
+    if (options?.deep || options?.withFolders) {
+      await this.downloadNodes(vault, "Folder");
+    }
+    if (options?.deep || options?.withMemos) {
+      await this.downloadNodes(vault, "Memo");
+    }
+    if (!vault.public) {
+      const membership = this.getCurrentMember(vault.memberships);
+      vault.__keys__ = membership?.keys;
+    }
+    return vault as ContractState;
   };
+
+  private getDataTx(object: Object) {
+    return object.data?.[object.data.length - 1];
+  };
+
+  private async downloadObject(object: Object, vault?: Vault) {
+    const dataTx = this.getDataTx(object);
+    const state = await this.getNodeState(dataTx);
+    if (!vault) {
+      return formatDates({ ...object, ...state });
+    } else {
+      const formatted = formatDates({ ...object, ...state, vaultId: vault.id });
+      return this.withVaultContext(formatted, vault);
+    }
+  };
+
+  private async downloadMemberships(vault: Vault) {
+    vault.memberships = await Promise.all((vault.memberships ? vault.memberships : [])
+      .map(async (membership: Membership) => {
+        const membershipObject = await this.downloadObject(membership, vault);
+        return membershipObject;
+      }));
+  };
+
+  private async downloadNodes(vault: Vault, type?: NodeType) {
+    vault.folders = [];
+    vault.stacks = [];
+    vault.memos = [];
+    vault.nodes = await Promise.all((vault.nodes ? vault.nodes : [])
+      .map(async (node: NodeLike) => {
+        if (!type || (node.type === type)) {
+          const nodeObject = await this.downloadObject(node, vault);
+          vault[node.type.toLowerCase() + "s"].push(nodeObject);
+          return nodeObject;
+        }
+        return node;
+      }));
+  };
+
+  private getCurrentMember(memberships?: Array<Membership>): Membership {
+    if (!this.config?.address) {
+      throw new BadRequest("Missing wallet address in api configuration.");
+    }
+    const membership = (memberships ? memberships : [])
+      .filter(membership => membership.address === this.config.address)[0];
+    if (!membership) {
+      throw new Forbidden("User is not a valid vault member.");
+    }
+    return membership;
+  }
+
+  private withVaultContext(object: Membership | NodeLike, vault: Vault): any {
+    const vaultContext = { __public__: vault.public, __cacheOnly__: false };
+    let encryptionContext: { __keys__?: EncryptedKeys[], __publicKey__?: null } = {};
+    if (!vault.public) {
+      const membership = this.getCurrentMember(vault.memberships);
+      encryptionContext.__keys__ = membership.keys;
+    }
+    return {
+      ...object,
+      ...vaultContext,
+      ...encryptionContext
+    }
+  }
 
   public async getMemberships(options: ListOptions = {}): Promise<Paginated<Membership>> {
     if (!this.config?.address) {

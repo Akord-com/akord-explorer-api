@@ -29,4 +29,11 @@ describe("Testing explorer api queries", () => {
     const { items: secondPage } = await akord.stack.list(vaultId, { limit: 10, nextToken: nextToken });
     console.log(secondPage);
   });
+
+  it("should list all stacks", async () => {
+    const vault = await akord.vault.get(vaultId, { deep: true });
+    console.log(vault);
+    expect(vault.stacks?.length).toBeTruthy();
+    console.log(vault.stacks?.[0]);
+  });
 });
