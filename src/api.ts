@@ -151,11 +151,33 @@ export default class ExplorerApi extends Api {
     }
   };
 
-  public async getNodeState(stateId: string | undefined): Promise<any> {
+  public async getNodeState(stateId: string | undefined, owner?: string): Promise<any> {
     if (!stateId) return null;
     try {
       Logger.log("[ExplorerApi] Getting state: " + stateId);
       const result = await getTxData(stateId, "json");
+      // legacy format adjustments
+      if (result.files) {
+        result.versions = result.files.map((file: any) => ({
+          resourceUri: [`arweave:${file.resourceTx}`, `hash:${file.resourceHash}`],
+          createdAt: file.postedAt,
+          owner: owner,
+          ...file
+        }));
+      }
+      if (result.message) {
+        result.versions = [{
+          message: result.message,
+          owner: owner,
+          reactions: result.reactions
+            ? result.reactions.map((reaction: any) => ({
+              createdAt: reaction.postedAt,
+              reaction: reaction.reaction,
+              owner: reaction.owner || owner
+            })) : [],
+          attachments: []
+        }];
+      }
       return result;
     } catch (error) {
       Logger.log(error);
@@ -193,7 +215,7 @@ export default class ExplorerApi extends Api {
 
   private async downloadObject(object: Object, vault?: Vault) {
     const dataTx = this.getDataTx(object);
-    const state = await this.getNodeState(dataTx);
+    const state = await this.getNodeState(dataTx, object.owner);
     if (!vault) {
       return formatDates({ ...object, ...state });
     } else {
@@ -498,6 +520,7 @@ export default class ExplorerApi extends Api {
 
     const input = this.getTagValue(vaultLastDataTx.tags, smartweaveTags.INPUT);
     const functionName = this.getTagValue(vaultLastDataTx.tags, protocolTags.FUNCTION_NAME);
+    const owner = this.getTagValue(vaultCreationTx.tags, protocolTags.SIGNER_ADDRESS);
     const dataTx = functionName === functions.VAULT_CREATE ? JSON.parse(input).data.vault : JSON.parse(input).data;
     const state = await this.getNodeState(dataTx);
 
@@ -505,7 +528,7 @@ export default class ExplorerApi extends Api {
 
     const vaultProto = {
       id: this.getTagValue(vaultCreationTx.tags, smartweaveTags.CONTRACT),
-      owner: this.getTagValue(vaultCreationTx.tags, protocolTags.SIGNER_ADDRESS),
+      owner: owner,
       createdAt: this.getTagValue(vaultCreationTx.tags, protocolTags.TIMESTAMP),
       updatedAt: this.getTagValue(vaultLastUpdateTx.tags, protocolTags.TIMESTAMP),
       public: isPublic,
@@ -535,8 +558,9 @@ export default class ExplorerApi extends Api {
 
     const input = this.getTagValue(nodeLastDataTx.tags, smartweaveTags.INPUT);
     const vaultId = this.getTagValue(nodeCreationTx.tags, protocolTags.VAULT_ID);
+    const owner = this.getTagValue(nodeCreationTx.tags, protocolTags.SIGNER_ADDRESS);
     const dataTx = JSON.parse(input).data;
-    const state = await this.getNodeState(dataTx);
+    const state = await this.getNodeState(dataTx, owner);
 
     const statusFunctionName = this.getTagValue(nodeStatusTx.tags, protocolTags.FUNCTION_NAME);
     const nodeStatus = (statusFunctionName === functions.NODE_CREATE || statusFunctionName === functions.NODE_RESTORE)
@@ -548,7 +572,7 @@ export default class ExplorerApi extends Api {
     const nodeProto = {
       id: id,
       vaultId: vaultId,
-      owner: this.getTagValue(nodeCreationTx.tags, protocolTags.SIGNER_ADDRESS),
+      owner: owner,
       createdAt: this.getTagValue(nodeCreationTx.tags, protocolTags.TIMESTAMP),
       updatedAt: this.getTagValue(nodeLastUpdateTx.tags, protocolTags.TIMESTAMP),
       status: nodeStatus,
@@ -577,6 +601,7 @@ export default class ExplorerApi extends Api {
 
     const vaultId = this.getTagValue(membershipCreationTx.tags, protocolTags.VAULT_ID);
     const input = this.getTagValue(membershipLastDataTx.tags, smartweaveTags.INPUT);
+    const owner = this.getTagValue(membershipCreationTx.tags, protocolTags.SIGNER_ADDRESS);
     const dataTx = this.getTagValue(membershipLastDataTx.tags, protocolTags.FUNCTION_NAME) === functions.VAULT_CREATE
       ? JSON.parse(input).data.membership
       : JSON.parse(input).data;
@@ -592,7 +617,7 @@ export default class ExplorerApi extends Api {
     const membershipProto = {
       id: id,
       vaultId: vaultId,
-      owner: this.getTagValue(membershipCreationTx.tags, protocolTags.SIGNER_ADDRESS),
+      owner: owner,
       createdAt: this.getTagValue(membershipCreationTx.tags, protocolTags.TIMESTAMP),
       updatedAt: this.getTagValue(membershipLastUpdateTx.tags, protocolTags.TIMESTAMP),
       status: membershipStatus,
