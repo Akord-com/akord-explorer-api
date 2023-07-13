@@ -181,7 +181,7 @@ export default class ExplorerApi extends Api {
       return result;
     } catch (error) {
       Logger.log(error);
-      if (error === 404 || (<any>error)?.response?.status === 404) {
+      if (error === 404 || (<any>error)?.response?.status === 404 || error instanceof NotFound) {
         throw new NotFound("Cannot find state: " + stateId);
       }
     }
@@ -227,24 +227,46 @@ export default class ExplorerApi extends Api {
   private async downloadMemberships(vault: Vault) {
     vault.memberships = await Promise.all((vault.memberships ? vault.memberships : [])
       .map(async (membership: Membership) => {
-        const membershipObject = await this.downloadObject(membership, vault);
-        return membershipObject;
+        try {
+          const membershipObject = await this.downloadObject(membership, vault);
+          return membershipObject;
+        } catch (error) {
+          Logger.log(error);
+          return {};
+        }
       }));
   };
 
   private async downloadNodes(vault: Vault, type?: NodeType) {
-    vault.folders = [];
-    vault.stacks = [];
-    vault.memos = [];
-    vault.nodes = await Promise.all((vault.nodes ? vault.nodes : [])
-      .map(async (node: NodeLike) => {
+    if (type) {
+      vault[type.toLowerCase() + "s"] = [];
+    } else {
+      vault.folders = [];
+      vault.stacks = [];
+      vault.memos = [];
+    }
+    const BATCH_CHUNK_SIZE = 100;
+    const nodes = vault.nodes ? vault.nodes : [];
+    let CHUNK_COUNT = 0;
+    let chunk = nodes.slice(CHUNK_COUNT * BATCH_CHUNK_SIZE, (CHUNK_COUNT + 1) * BATCH_CHUNK_SIZE);
+    while (chunk.length > 0) {
+      await Promise.all(chunk.map(async (node, i) => {
         if (!type || (node.type === type)) {
-          const nodeObject = await this.downloadObject(node, vault);
-          vault[node.type.toLowerCase() + "s"].push(nodeObject);
-          return nodeObject;
+          try {
+            Logger.log(`[ExplorerApi] [${CHUNK_COUNT * BATCH_CHUNK_SIZE + i}/${vault.nodes?.length}] Fetching ${type}: ${node.id}`);
+            const nodeObject = await this.downloadObject(node, vault);
+            vault[node.type.toLowerCase() + "s"].push(nodeObject);
+          } catch (error) {
+            Logger.log(error);
+            if ((<any>error).status === "ECONNREFUSED" || (<any>error).response?.status === "ECONNREFUSED" || (<any>error).code === "ECONNREFUSED") {
+              return;
+            }
+          }
         }
-        return node;
       }));
+      CHUNK_COUNT++;
+      chunk = nodes.slice(CHUNK_COUNT * BATCH_CHUNK_SIZE, (CHUNK_COUNT + 1) * BATCH_CHUNK_SIZE);
+    }
   };
 
   private getCurrentMember(memberships?: Array<Membership>): Membership {
