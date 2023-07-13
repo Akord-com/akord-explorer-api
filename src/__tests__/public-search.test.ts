@@ -15,7 +15,9 @@ describe("Testing explorer api queries", () => {
       tags: {
         values: ["Health Seychelles Morning dynamic"],
         searchCriteria: "CONTAINS_SOME"
-      }
+      },
+      minCreatedAt: new Date("2023-06-14T16:47:03.844Z"),
+      maxCreatedAt: new Date(1686761223844)
     });
     console.log(vaults);
   });

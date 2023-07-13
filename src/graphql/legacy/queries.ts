@@ -18,40 +18,6 @@ const TxNode = gql`
   }
 `
 
-const timelineQuery = gql`
-query transactionsByContract($vaultId: String!, $protocolName: String!) {
-  transactions(
-      tags: [
-        {
-          name: "App-Name",
-          values: ["SmartWeaveAction"]
-        },
-        {
-          name: "Contract",
-          values: [$vaultId]
-        },
-        {
-          name: "Protocol-Name",
-          values: [$protocolName, "Akord-Test"]
-        }
-      ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
-
 const transactionsByVaultIdQuery = gql`
 query transactionsByVaultId($id: String!, $protocolName: String!) {
   transactions(
@@ -67,7 +33,7 @@ query transactionsByVaultId($id: String!, $protocolName: String!) {
           values: [$id]
         },
         {
-          name:"Function-Name"
+          name:"Command"
           values: ["vault:init", "vault:update", "vault:archive", "vault:restore"]
         },
         {
@@ -107,7 +73,7 @@ query transactionsByNodeId($id: String!, $protocolName: String!) {
           values: [$id]
         },
         {
-          name:"Function-Name"
+          name:"Command"
           values: ["node:create", "node:update", "node:revoke", "node:restore", "node:move"]
         },
         {
@@ -147,7 +113,7 @@ const transactionsByMembershipIdQuery = gql`
               values: [$id]
             },
             {
-              name:"Function-Name"
+              name:"Command"
               values: ["vault:init", "membership:invite", "membership:add", "membership:revoke", "membership:add", "membership:accept", "membership:update", "membership:key-rotate"]
             },
             {
@@ -172,13 +138,12 @@ const transactionsByMembershipIdQuery = gql`
         }
         `;
 
-
 const membershipsByAddressQuery = gql`
-query membershipsByAddress($address: String!, $protocolName: String!, $limit: Int, $nextToken: String) {
-  transactions(
-    sort: HEIGHT_ASC,
-    first: $limit,
-    after: $nextToken,
+    query membershipsByAddress($address: String!, $protocolName: String!, $limit: Int, $nextToken: String) {
+      transactions(
+        sort: HEIGHT_ASC,
+        first: $limit,
+        after: $nextToken,
       tags: [
         {
           name: "Member-Address",
@@ -222,54 +187,8 @@ query nodesByVaultIdAndType($vaultId: String!, $type: String!, $protocolName: St
           values: [$type]
         },
         {
-          name:"Function-Name"
-          values: ["node:create"]
-        },
-        {
-          name: "Protocol-Name",
-          values: [$protocolName, "Akord-Test"]
-        }
-      ]
-  ) {
-    edges {
-      cursor
-      node {
-          id
-          tags {
-            name
-            value
-          }
-      }
-    }
-    pageInfo {
-      hasNextPage
-    }
-  }
-}
-`;
-
-const nodesByParentIdAndTypeQuery = gql`
-query nodesByParentIdAndType($parentId: String!, $vaultId: String!, $type: String!, $protocolName: String!, $limit: Int, $nextToken: String) {
-  transactions(
-      sort: HEIGHT_ASC,
-      first: $limit,
-      after: $nextToken,
-      tags: [
-        {
-          name: "Parent-Id",
-          values: [$parentId]
-        },
-        {
-          name: "Vault-Id",
-          values: [$vaultId]
-        },
-        {
-          name: "Node-Type",
-          values: [$type]
-        },
-        {
-          name:"Function-Name"
-          values: ["node:create", "node:move"]
+          name:"Command"
+          values: ["node:update"]
         },
         {
           name: "Protocol-Name",
@@ -306,7 +225,7 @@ query membershipsByVaultId($vaultId: String!, $protocolName: String!, $limit: In
           values: [$id]
         },
         {
-          name: "Function-Name",
+          name: "Command",
           values: ["membership:invite", "membership:add", "vault:init"]
         },
         {
@@ -341,7 +260,7 @@ query vaultsByTags($tags: [String!]!, $protocolName: String!) {
           values: $tags
         },
         {
-          name: "Function-Name",
+          name: "Command",
           values: ["vault:init", "vault:update"]
         },
         {
@@ -375,7 +294,7 @@ query listPublicVaults($protocolName: String!) {
   transactions(
       tags: [
         {
-          name: "Function-Name",
+          name: "Command",
           values: ["vault:init"]
         },
         {
@@ -409,7 +328,7 @@ query listPublicNodesByTypeQuery($type: String!, $protocolName: String!) {
   transactions(
       tags: [
         {
-          name: "Function-Name",
+          name: "Command",
           values: ["node:create"]
         },
         {
@@ -451,7 +370,7 @@ query nodesByTagsAndType($tags: [String!]!, $type: String!, $protocolName: Strin
           values: $tags
         },
         {
-          name: "Function-Name",
+          name: "Command",
           values: ["node:create", "node:update"]
         },
         {
@@ -495,7 +414,7 @@ query vaultDataQuery($id: String!, $protocolName: String!) {
           values: [$id]
         },
         {
-          name: "Function-Name",
+          name: "Command",
           values: ["vault:update", "vault:init"]
         },
         {
@@ -531,7 +450,7 @@ query nodeDataQuery($id: String!, $protocolName: String!) {
           values: [$id]
         },
         {
-          name: "Function-Name",
+          name: "Command",
           values: ["node:update", "node:create"]
         },
         {
@@ -567,7 +486,7 @@ query membershipQuery($id: String!, $protocolName: String!) {
           values: [$id]
         },
         {
-          name: "Function-Name",
+          name: "Command",
           values: ["vault:init", "membership:invite", "membership:key-rotate", "membership:update"]
         },
         {
@@ -603,7 +522,7 @@ query membershipQuery($address: String!, $vaultId: String!, $protocolName: Strin
           values: [$vaultId]
         },
         {
-          name: "Function-Name",
+          name: "Command",
           values: ["vault:init", "membership:invite", "membership:add"]
         },
         {
@@ -643,7 +562,7 @@ query nodeStatusQuery($id: String!, $protocolName: String!) {
           values: [$id]
         },
         {
-          name: "Function-Name",
+          name: "Command",
           values: ["node:create", "node:revoke", "node:restore"]
         },
         {
@@ -680,7 +599,7 @@ query nodeParentIdQuery($id: String!, $protocolName: String!) {
           values: [$id]
         },
         {
-          name: "Function-Name",
+          name: "Command",
           values: ["node:create", "node:move"]
         },
         {
@@ -717,7 +636,7 @@ query vaultStatusQuery($id: String!, $protocolName: String!) {
           values: [$id]
         },
         {
-          name: "Function-Name",
+          name: "Command",
           values: ["vault:init", "vault:archive", "vault:restore"]
         },
         {
@@ -753,7 +672,7 @@ query vaultLastUpdateQuery($id: String!, $protocolName: String!) {
           values: [$id]
         },
         {
-          name: "Function-Name",
+          name: "Command",
           values: ["vault:init", "vault:archive", "vault:restore", "vault:update"]
         },
         {
@@ -789,8 +708,8 @@ query nodeLastUpdateQuery($id: String!, $protocolName: String!) {
           values: [$id]
         },
         {
-          name: "Function-Name",
-          values: ["node:create", "node:update", "node:restore", "node:revoke", "node:move"]
+          name: "Command",
+          values: ["node:create", "node:update", "node:restore", "node:revoke"]
         },
         {
           name: "Protocol-Name",
@@ -825,7 +744,7 @@ query membershipLastUpdateQuery($id: String!, $protocolName: String!) {
           values: [$id]
         },
         {
-          name: "Function-Name",
+          name: "Command",
           values: ["vault:init", "membership:invite", "membership:add", "membership:revoke", "membership:add", "membership:accept", "membership:update"]
         },
         {
@@ -861,7 +780,7 @@ query vaultCreationQuery($id: String!, $protocolName: String!) {
           values: [$id]
         },
         {
-          name: "Function-Name",
+          name: "Command",
           values: ["vault:init"]
         },
         {
@@ -897,7 +816,7 @@ query nodeCreationQuery($id: String!, $protocolName: String!) {
           values: [$id]
         },
         {
-          name: "Function-Name",
+          name: "Command",
           values: ["node:create"]
         },
         {
@@ -933,7 +852,7 @@ query membershipCreationQuery($id: String!, $protocolName: String!) {
           values: [$id]
         },
         {
-          name: "Function-Name",
+          name: "Command",
           values: ["membership:invite", "membership:add", "vault:init"]
         },
         {
@@ -969,7 +888,7 @@ query membershipStatusQuery($id: String!, $protocolName: String!) {
           values: [$id]
         },
         {
-          name: "Function-Name",
+          name: "Command",
           values: ["vault:init", "membership:invite", "membership:accept", "membership:add", "membership:revoke"]
         },
         {
@@ -995,13 +914,11 @@ query membershipStatusQuery($id: String!, $protocolName: String!) {
     `;
 
 export {
-  timelineQuery,
   transactionsByVaultIdQuery,
   transactionsByNodeIdQuery,
   transactionsByMembershipIdQuery,
   membershipsByAddressQuery,
   nodesByVaultIdAndTypeQuery,
-  nodesByParentIdAndTypeQuery,
   membershipsByVaultIdQuery,
   vaultsByTagsQuery,
   listPublicVaultsQuery,
