@@ -11,7 +11,7 @@ describe("Testing explorer api queries", () => {
   });
 
   it("should list all vaults with at least one tag within the given list", async () => {
-    const vaults = await publicExplorerApi.listAllPublicVaults({
+    const { data, errors } = await publicExplorerApi.listAllPublicVaults({
       tags: {
         values: ["Health Seychelles Morning dynamic"],
         searchCriteria: "CONTAINS_SOME"
@@ -19,7 +19,7 @@ describe("Testing explorer api queries", () => {
       minCreatedAt: new Date("2023-06-14T16:47:03.844Z"),
       maxCreatedAt: new Date(1686761223844)
     });
-    console.log(vaults);
+    console.log(data);
   });
 
   it("should list public folders with pagination", async () => {

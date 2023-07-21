@@ -392,6 +392,7 @@ export default class ExplorerApi extends Api {
   public async listPublicVaults(options: ExplorerListOptions = {}): Promise<Paginated<Vault>> {
     let items: Array<TxNode>;
     let nextToken = "null";
+    const errors = [] as { id: string, error: Error }[];
     if (options.tags) {
       const queryResult = await this.client.executeQuery(queries.vaultsByTagsQuery, { tags: this.processTags(options.tags.values), nextToken: options.nextToken });
       items = queryResult.items;
@@ -401,32 +402,43 @@ export default class ExplorerApi extends Api {
       items = queryResult.items;
       nextToken = queryResult.nextToken;
     }
-    const vaults = await Promise.all(items
-      .map(async (item: TxNode) => {
-        const vaultId = this.getTagValue(item.tags, "Contract");
-        const vault = await this.getVault(vaultId);
-        return new Vault(vault, []);
+    const vaultIds = [...new Set(items.map(((item: TxNode) => this.getTagValue(item.tags, "Contract"))))];
+    const vaults = await Promise.all(vaultIds
+      .map(async (vaultId: string) => {
+        try {
+          const vault = await this.getVault(vaultId);
+          return new Vault(vault, []);
+        } catch (error: any) {
+          errors.push({ id: vaultId, error })
+        }
       })) as Array<Vault>;
-    return { items: this.filterByDates<Vault>(options, this.filterByTags<Vault>(options.tags, vaults.filter((vault: Vault) => vault.status === status.ACTIVE))), nextToken };
+    return {
+      items: this.filterByDates<Vault>(options, this.filterByTags<Vault>(options.tags, vaults.filter((vault: Vault) => vault && vault.status === status.ACTIVE))),
+      nextToken,
+      errors
+    };
   };
 
-  public async listAllPublicVaults(options: ExplorerListOptions = {}): Promise<Array<Vault>> {
+  public async listAllPublicVaults(options: ExplorerListOptions = {}): Promise<{ data: Array<Vault>, errors: Array<{ id: string, error: Error }> }> {
     let nextToken = undefined;
     let results: Vault[] = [];
+    let errors = [] as { id: string, error: Error }[];
     do {
-      const { items, nextToken: nextPage } = await this.listPublicVaults(options);
+      const { items, nextToken: nextPage, errors: errorsFromPage } = await this.listPublicVaults(options);
       results = results.concat(items);
+      errors = errors.concat(errorsFromPage ? errorsFromPage : []);
       if (nextPage === "null") {
         nextToken = undefined;
       }
       options.nextToken = nextPage;
       nextToken = nextPage;
     } while (nextToken);
-    return results;
+    return { data: results, errors };
   };
   public async listPublicNodes<T extends Node>(type: NodeType, options: ExplorerListOptions = {}): Promise<Paginated<T>> {
     let items: Array<TxNode>;
     let nextToken = "null";
+    const errors = [] as { id: string, error: Error }[];
     if (options.tags) {
       const queryResult = await this.client.executeQuery(queries.nodesByTagsAndTypeQuery, { type, tags: this.processTags(options.tags.values), nextToken: options.nextToken });
       items = queryResult.items;
@@ -436,21 +448,27 @@ export default class ExplorerApi extends Api {
       items = queryResult.items;
       nextToken = queryResult.nextToken;
     }
-    const nodes = await Promise.all(items
-      .map(async (item: TxNode) => {
-        const nodeId = this.getTagValue(item.tags, protocolTags.NODE_ID);
-        const node = await this.getNodeProto(nodeId);
+    const nodeIds = [...new Set(items.map(((item: TxNode) => this.getTagValue(item.tags, protocolTags.NODE_ID))))];
+    const nodes = await Promise.all(nodeIds
+      .map(async (nodeId: string) => {
+        try {
+          const node = await this.getNodeProto(nodeId);
         return nodeLikeFactory(node, type, DEFAULT_VAULT_CONTEXT) as unknown as T;
+        } catch (error: any) {
+          errors.push({ id: nodeId, error })
+        }
       })) as Array<T>;
-    return { items: this.filterByDates<T>(options, this.filterByTags<T>(options.tags, nodes.filter((node: T) => node.status === status.ACTIVE))), nextToken };
+    return { items: this.filterByDates<T>(options, this.filterByTags<T>(options.tags, nodes.filter((node: T) => node && node.status === status.ACTIVE))), nextToken };
   };
 
   public async listAllPublicNodes<T extends Node>(type: NodeType, options: ExplorerListOptions = {}): Promise<Array<T>> {
     let nextToken = undefined;
     let results: T[] = [];
+    let errors = [] as { id: string, error: Error }[];
     do {
-      const { items, nextToken: nextPage } = await this.listPublicNodes<T>(type, options);
+      const { items, nextToken: nextPage, errors: errorsFromPage } = await this.listPublicNodes<T>(type, options);
       results = results.concat(items);
+      errors = errors.concat(errorsFromPage ? errorsFromPage : []);
       if (nextPage === "null") {
         nextToken = undefined;
       }
