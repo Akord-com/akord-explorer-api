@@ -36,7 +36,7 @@ export class ApiClient {
           retryCount++;
           Logger.log("Retry count: " + retryCount);
         } else {
-          throw new InternalError("Cannot satisfy the request. Try again later, or contact the app or website owner.");
+          throw error;
         }
       }
     }
