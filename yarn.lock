@@ -10,7 +10,7 @@
     "@akord/crypto" "0.10.0"
     amazon-cognito-identity-js "6.1.2"
 
-"@akord/akord-js@4.16.2":
+"@akord/akord-js@4.16.1":
   version "4.16.1"
   resolved "https://registry.yarnpkg.com/@akord/akord-js/-/akord-js-4.16.1.tgz#5dc040b02f284a41a4621957757aa4f285d27ed2"
   integrity sha512-Y92XHgzMJNGrNgbsDo6pZs7Le/O+qbmwMiax7gztSZRiqQUfsrLawmqVdxeQN8HLu+aOm5uLwVEHhnlbb+dwKg==
