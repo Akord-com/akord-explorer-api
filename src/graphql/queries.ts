@@ -187,6 +187,10 @@ query membershipsByAddress($address: String!, $protocolName: String!, $limit: In
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -228,6 +232,10 @@ query nodesByVaultIdAndType($vaultId: String!, $type: String!, $protocolName: St
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
   ) {
@@ -274,6 +282,10 @@ query nodesByParentIdAndType($parentId: String!, $vaultId: String!, $type: Strin
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
   ) {
@@ -312,6 +324,10 @@ query membershipsByVaultId($vaultId: String!, $protocolName: String!, $limit: In
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -351,6 +367,10 @@ query vaultsByTags($tags: [String!]!, $protocolName: String!) {
         {
           name: "Public",
           values: ["true"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -385,6 +405,10 @@ query listPublicVaults($protocolName: String!) {
         {
           name: "Public",
           values: ["true"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -423,6 +447,10 @@ query listPublicNodesByTypeQuery($type: String!, $protocolName: String!) {
         {
           name: "Node-Type",
           values: [$type]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -465,6 +493,10 @@ query nodesByTagsAndType($tags: [String!]!, $type: String!, $protocolName: Strin
         {
           name: "Node-Type",
           values: [$type]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -501,6 +533,10 @@ query vaultDataQuery($id: String!, $protocolName: String!) {
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -537,6 +573,10 @@ query nodeDataQuery($id: String!, $protocolName: String!) {
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -573,6 +613,10 @@ query membershipQuery($id: String!, $protocolName: String!) {
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -613,6 +657,10 @@ query membershipQuery($address: String!, $vaultId: String!, $protocolName: Strin
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -649,6 +697,10 @@ query nodeStatusQuery($id: String!, $protocolName: String!) {
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -686,6 +738,10 @@ query nodeParentIdQuery($id: String!, $protocolName: String!) {
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -723,6 +779,10 @@ query vaultStatusQuery($id: String!, $protocolName: String!) {
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -759,6 +819,10 @@ query vaultLastUpdateQuery($id: String!, $protocolName: String!) {
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -795,6 +859,10 @@ query nodeLastUpdateQuery($id: String!, $protocolName: String!) {
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -831,6 +899,10 @@ query membershipLastUpdateQuery($id: String!, $protocolName: String!) {
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -867,6 +939,10 @@ query vaultCreationQuery($id: String!, $protocolName: String!) {
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -903,6 +979,10 @@ query nodeCreationQuery($id: String!, $protocolName: String!) {
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -939,6 +1019,10 @@ query membershipCreationQuery($id: String!, $protocolName: String!) {
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {
@@ -975,6 +1059,10 @@ query membershipStatusQuery($id: String!, $protocolName: String!) {
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) {

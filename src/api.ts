@@ -318,17 +318,21 @@ export default class ExplorerApi extends Api {
       { address: this.config.address, nextToken: options.nextToken, limit: getLimit(options.limit) });
     const vaults = await Promise.all(items
       .map(async (item: TxNode) => {
-        const vaultId = this.getTagValue(item.tags, "Contract");
-        try {
-          const vault = await this.getVault(vaultId);
-          vault.keys = vault.__keys__;
-          return vault;
-        } catch (error) {
-          if (error instanceof Forbidden) {
-            // user is no longer a valid vault member
-            return null;
+        if (item && item.tags) {
+          const vaultId = this.getTagValue(item.tags, "Contract");
+          try {
+            const vault = await this.getVault(vaultId);
+            vault.keys = vault.__keys__;
+            return vault;
+          } catch (error) {
+            if (error instanceof Forbidden) {
+              // user is no longer a valid vault member
+              return null;
+            }
+            throw error;
           }
-          throw error;
+        } else {
+          return null;
         }
       })) as Array<Vault>;
     return { items: this.filterByStatus(options.filter, vaults.filter((vault: Vault) => vault !== null)), nextToken: nextPage };
@@ -453,7 +457,7 @@ export default class ExplorerApi extends Api {
       .map(async (nodeId: string) => {
         try {
           const node = await this.getNodeProto(nodeId);
-        return nodeLikeFactory(node, type, DEFAULT_VAULT_CONTEXT) as unknown as T;
+          return nodeLikeFactory(node, type, DEFAULT_VAULT_CONTEXT) as unknown as T;
         } catch (error: any) {
           errors.push({ id: nodeId, error })
         }
@@ -696,6 +700,16 @@ export default class ExplorerApi extends Api {
     return txs;
   }
 
+  private async transactionQuery(queryName: string, variables: any): Promise<TxNode> {
+    const { items } = await this.client.executeQuery((queries as any)[queryName], variables);
+    let item = items[0];
+    if (!item) {
+      const { items } = await this.client.executeQuery((legacyQueries as any)[queryName], variables);
+      item = items[0];
+    }
+    return item;
+  }
+
   private filterByTags<T>(tags: ListOptions["tags"], objects: Array<T>): Array<T> {
     if (tags) {
       const processedTags = this.processTags(tags.values as string[]);
@@ -762,10 +776,12 @@ export default class ExplorerApi extends Api {
     if (!this.config?.address) {
       throw new BadRequest("Missing wallet address in api configuration.");
     }
-
-    const { items } = await this.client.executeQuery(queries.membershipByAddressAndVaultIdQuery,
-      { address: this.config.address, vaultId });
-    const membershipId = this.getTagValue(items?.[0]?.tags, protocolTags.MEMBERSHIP_ID);
+    const item = await this.transactionQuery("membershipByAddressAndVaultIdQuery", { address: this.config.address, vaultId });
+    if (!item) {
+      throw new NotFound("Cannot find membership for: " + this.config.address
+        + " , for vault id: " + vaultId);
+    }
+    const membershipId = this.getTagValue(item.tags, protocolTags.MEMBERSHIP_ID);
     const membershipProto = await this.getMembershipProto(membershipId);
     return new Membership(membershipProto, membershipProto.keys);
   }
