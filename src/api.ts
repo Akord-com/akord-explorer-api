@@ -316,7 +316,7 @@ export default class ExplorerApi extends Api {
     }
     const { items, nextToken: nextPage } = await this.client.executeQuery(queries.membershipsByAddressQuery,
       { address: this.config.address, nextToken: options.nextToken, limit: getLimit(options.limit) });
-    const vaults = await Promise.all(items
+    const promises = items
       .map(async (item: TxNode) => {
         if (item && item.tags) {
           const vaultId = this.getTagValue(item.tags, "Contract");
@@ -334,8 +334,9 @@ export default class ExplorerApi extends Api {
         } else {
           return null;
         }
-      })) as Array<Vault>;
-    return { items: this.filterByStatus(options.filter, vaults.filter((vault: Vault) => vault !== null)), nextToken: nextPage };
+      }) as Promise<Vault>[];
+    const { items: vaults, errors } = await this.handleListErrors<Vault>(items as any, promises);
+    return { items: this.filterByStatus(options.filter, vaults.filter((vault: Vault) => vault !== null)), nextToken: nextPage, errors };
   };
 
   public async getNodesByVaultId<T>(vaultId: string, type: NodeType, options: ListOptions): Promise<Paginated<T>> {
@@ -352,27 +353,30 @@ export default class ExplorerApi extends Api {
       nextToken = result.nextToken;
     }
     const vaultContext = await this.getVaultContext(vaultId);
-    const nodes = await Promise.all(items
+    const promises = items
       .map(async (item: TxNode) => {
         const nodeId = this.getTagValue(item.tags, protocolTags.NODE_ID);
         const node = await this.getNodeProto(nodeId);
         return nodeLikeFactory(formatDates(node), type, vaultContext) as T;
-      })) as Array<T>;
-    return { items: this.filterByStatus(options.filter, nodes), nextToken };
+      }) as Promise<T>[];
+    const { items: nodes, errors } = await this.handleListErrors<T>(items as any, promises);
+    return { items: this.filterByStatus(options.filter, nodes), nextToken, errors };
   };
 
   public async getMembershipsByVaultId(vaultId: string, options: ListOptions): Promise<Paginated<Membership>> {
     const { items, nextToken: nextPage } = await this.client.executeQuery(queries.membershipsByVaultIdQuery,
       { vaultId, nextToken: options.nextToken, limit: getLimit(options.limit) });
     const vaultContext = await this.getVaultContext(vaultId);
-    const memberships = await Promise.all(items
+    const promises = items
       .map(async (item: TxNode) => {
         const membershipId = this.getTagValue(item.tags, protocolTags.MEMBERSHIP_ID);
         const membershipProto = await this.getMembershipProto(membershipId);
         membershipProto.__public__ = vaultContext.__public__;
         return new Membership(formatDates(membershipProto), vaultContext.__keys__);
-      })) as Array<Membership>;
-    return { items: this.filterByStatus(options.filter, memberships), nextToken: nextPage };
+      }) as Promise<Membership>[];
+    const { items: memberships, errors } = await this.handleListErrors<Membership>(items as any, promises);
+    const results = await Promise.all(promises.map(p => p.catch(e => e)));
+    return { items: this.filterByStatus(options.filter, memberships), nextToken: nextPage, errors };
   };
 
   public async getTransactions(vaultId: string): Promise<Array<Transaction>> {
@@ -539,6 +543,17 @@ export default class ExplorerApi extends Api {
   public async readNotifications(): Promise<any> {
     throw new Error("Method not implemented.");
   };
+
+  private async handleListErrors<T>(originalItems: Array<T>, promises: Array<Promise<T>>)
+    : Promise<{ items: Array<T>, errors: Array<{ id: string, error: Error }> }> {
+    const results = await Promise.all(promises.map(p => p.catch(e => e)));
+    const items = results.filter(result => !(result instanceof Error));
+    const errors = results
+      .map((result, index) => ({ result, index }))
+      .filter((mapped) => mapped.result instanceof Error)
+      .map((filtered) => ({ id: (<any>originalItems[filtered.index]).id, error: filtered.result }));
+    return { items, errors };
+  }
 
   private async getVaultProto(id: string): Promise<Vault> {
     const txs = await this.transactionsByObjectIdQuery(id, "transactionsByVaultIdQuery");
