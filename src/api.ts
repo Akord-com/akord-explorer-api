@@ -427,21 +427,19 @@ export default class ExplorerApi extends Api {
     };
   };
 
-  public async listAllPublicVaults(options: ExplorerListOptions = {}): Promise<{ data: Array<Vault>, errors: Array<{ id: string, error: Error }> }> {
+  public async listAllPublicVaults(options: ExplorerListOptions = {}): Promise<Array<Vault>> {
     let nextToken = undefined;
     let results: Vault[] = [];
-    let errors = [] as { id: string, error: Error }[];
     do {
-      const { items, nextToken: nextPage, errors: errorsFromPage } = await this.listPublicVaults(options);
+      const { items, nextToken: nextPage } = await this.listPublicVaults(options);
       results = results.concat(items);
-      errors = errors.concat(errorsFromPage ? errorsFromPage : []);
       if (nextPage === "null") {
         nextToken = undefined;
       }
       options.nextToken = nextPage;
       nextToken = nextPage;
     } while (nextToken);
-    return { data: results, errors };
+    return results;
   };
   public async listPublicNodes<T extends Node>(type: NodeType, options: ExplorerListOptions = {}): Promise<Paginated<T>> {
     let items: Array<TxNode>;
@@ -472,11 +470,9 @@ export default class ExplorerApi extends Api {
   public async listAllPublicNodes<T extends Node>(type: NodeType, options: ExplorerListOptions = {}): Promise<Array<T>> {
     let nextToken = undefined;
     let results: T[] = [];
-    let errors = [] as { id: string, error: Error }[];
     do {
-      const { items, nextToken: nextPage, errors: errorsFromPage } = await this.listPublicNodes<T>(type, options);
+      const { items, nextToken: nextPage } = await this.listPublicNodes<T>(type, options);
       results = results.concat(items);
-      errors = errors.concat(errorsFromPage ? errorsFromPage : []);
       if (nextPage === "null") {
         nextToken = undefined;
       }
