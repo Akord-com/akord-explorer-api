@@ -1,6 +1,6 @@
 {
   "name": "@akord/akord-explorer-api",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "A decentralized API to read Akord content directly from the permaweb",
   "main": "lib/index.js",
   "author": "Akord Team",
