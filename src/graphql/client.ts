@@ -26,7 +26,11 @@ export class ApiClient {
         if (hasNextPage) {
           nextToken = result?.transactions?.edges?.[result.transactions.edges.length - 1].cursor;
         }
-        const items = (result?.transactions.edges || []).map((edge: Edge) => edge.node);
+        let items = (result?.transactions.edges || []).map((edge: Edge) => edge.node);
+        // filter out Warp tx duplicates
+        if (items.length > 1) {
+          items = items.filter((node: TxNode) => node.tags.findIndex((tag) => tag.name === "Action" && tag.value === "WarpInteraction") < 0);
+        }
         return { items, nextToken };
       } catch (error: any) {
         Logger.log(error);
