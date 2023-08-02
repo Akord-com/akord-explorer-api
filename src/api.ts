@@ -684,7 +684,8 @@ export default class ExplorerApi extends Api {
   private processTags(tags: string[]): string[] {
     const processedTags = [] as string[];
     tags?.map((tag: string) =>
-      tag.split(" ").map((value: string) => processedTags.push(value.toLowerCase())));
+      tag?.split(" ").join(",").split(".").join(",").split(",")
+        .map((value: string) => processedTags.push(value.toLowerCase())));
     return processedTags;
   };
 
