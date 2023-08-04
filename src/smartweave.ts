@@ -13,7 +13,7 @@ const arweave = Arweave.init({
   host: "arweave.net",
   port: 443,
   protocol: "https"
-});
+}) as any;
 
 // Set up Warp client
 const contractsCache = new LevelDbCache<ContractCache<Vault>>(WARP_CACHE_OPTIONS);
@@ -30,9 +30,9 @@ const warpWithArLoader = WarpFactory.custom(arweave, WARP_CACHE_OPTIONS, ARWEAVE
   )
   .build();
 
-const readContractState = async (contractId: string): Promise<Vault> => {
+const readContractState = async <T>(contractId: string): Promise<T> => {
   const evalStateResult = await warpWithArLoader
-    .contract<Vault>(contractId)
+    .contract<T>(contractId)
     .setEvaluationOptions({ allowBigInt: true })
     .readState();
   return evalStateResult.cachedValue.state;

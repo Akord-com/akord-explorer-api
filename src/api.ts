@@ -16,6 +16,8 @@ import { ApiConfig, defaultApiConfig, initConfig } from "./config";
 import { Logger } from "./logger";
 import { status, functions, protocolTags, smartweaveTags } from "@akord/akord-js/lib/constants";
 import { readContractState } from "./smartweave";
+import { ApiClient as AkordApiClient } from "@akord/akord-js/lib/api/api-client";
+import { apiConfig } from "@akord/akord-js/lib/api/config";
 
 const DEFAULT_LIMIT = 100, MAX_LIMIT = 100;
 
@@ -188,7 +190,7 @@ export default class ExplorerApi extends Api {
   };
 
   public async getContractState(id: string, options?: VaultGetOptions): Promise<ContractState> {
-    let vault = await readContractState(id);
+    let vault = await readContractState<Vault>(id);
     vault = await this.downloadObject(vault);
     if (!vault.public || options?.deep || options?.withMemberships) {
       await this.downloadMemberships(vault);
@@ -481,6 +483,33 @@ export default class ExplorerApi extends Api {
     } while (nextToken);
     return results;
   };
+
+  public async vaultFollow(vaultId: string): Promise<string> {
+    const config = apiConfig(this.config.env || "v2");
+    const response = await new AkordApiClient()
+      .post(`${config.apiurl}/vaults/${vaultId}/follow`);
+    return response.id;
+  };
+
+  public async vaultFollowList(): Promise<Array<Vault>> {
+    if (!this.config?.address) {
+      throw new BadRequest("Missing wallet address in api configuration.");
+    }
+    const queryResult = await this.client.executeQuery(queries.followContractQuery, { address: this.config.address });
+    const item = queryResult.items[0];
+    if (!item) return [];
+    const ids = (await readContractState<any>(item.id)).ids;
+    const vaults = await Promise.all((ids || [])
+      .map(async (vaultId: string) => {
+        try {
+          const vault = await this.getVault(vaultId);
+          return new Vault(vault, []);
+        } catch (error: any) {
+          return null;
+        }
+      })) as Array<Vault>;
+    return vaults.filter((vault: Vault) => vault !== null);
+  }
 
   // The explorer API is read-only, hence the following methods are not implemented
 
