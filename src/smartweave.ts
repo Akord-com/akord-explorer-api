@@ -1,6 +1,7 @@
 import Arweave from 'arweave';
-import { WarpFactory, LoggerFactory, ArweaveGatewayBundledInteractionLoader, WarpGatewayContractDefinitionLoader, LevelDbCache, ContractCache, SrcCache } from "warp-contracts";
+import { WarpFactory, LoggerFactory, ArweaveGatewayBundledInteractionLoader, WarpGatewayContractDefinitionLoader, LevelDbCache, ContractCache, SrcCache, DEFAULT_LEVEL_DB_LOCATION } from "warp-contracts";
 import { Vault } from "@akord/akord-js";
+import { DeployPlugin } from 'warp-contracts-plugin-deploy';
 
 const ARWEAVE_ENV = 'mainnet';
 const WARP_CACHE_OPTIONS = {
@@ -14,6 +15,15 @@ const arweave = Arweave.init({
   port: 443,
   protocol: "https"
 }) as any;
+
+// Set up SmartWeave client
+LoggerFactory.INST.logLevel("error");
+const smartweave = WarpFactory
+  .forMainnet({
+    inMemory: true,
+    dbLocation: DEFAULT_LEVEL_DB_LOCATION,
+  })
+  .use(new DeployPlugin());
 
 // Set up Warp client
 const contractsCache = new LevelDbCache<ContractCache<Vault>>(WARP_CACHE_OPTIONS);
@@ -38,4 +48,13 @@ const readContractState = async <T>(contractId: string): Promise<T> => {
   return evalStateResult.cachedValue.state;
 };
 
-export { readContractState };
+const getContract = (contractId: string, wallet: any) => {
+  const contract = smartweave
+    .contract(contractId)
+  if (wallet) {
+    return contract.connect(wallet);
+  }
+  return contract;
+};
+
+export { readContractState, smartweave, getContract };

@@ -11,13 +11,15 @@ import { EncryptionMetadata } from "@akord/akord-js/lib/core";
 import { NotFound } from "@akord/akord-js/lib/errors/not-found";
 import { Forbidden } from "@akord/akord-js/lib/errors/forbidden";
 import { BadRequest } from "@akord/akord-js/lib/errors/bad-request";
+import { InternalError } from "@akord/akord-js/lib/errors/internal-error";
 import { EncryptedKeys } from "@akord/crypto";
 import { ApiConfig, defaultApiConfig, initConfig } from "./config";
 import { Logger } from "./logger";
 import { status, functions, protocolTags, smartweaveTags } from "@akord/akord-js/lib/constants";
-import { readContractState } from "./smartweave";
-import { ApiClient as AkordApiClient } from "@akord/akord-js/lib/api/api-client";
-import { apiConfig } from "@akord/akord-js/lib/api/config";
+import { readContractState, getContract, smartweave } from "./smartweave";
+import { Arweave, ArweaveSigner } from "arbundles";
+import { GraphQLClient } from "graphql-request";
+import { Tag as WarpTag } from "warp-contracts";
 
 const DEFAULT_LIMIT = 100, MAX_LIMIT = 100;
 
@@ -485,18 +487,76 @@ export default class ExplorerApi extends Api {
   };
 
   public async vaultFollow(vaultId: string): Promise<string> {
-    const config = apiConfig(this.config.env || "v2");
-    const response = await new AkordApiClient()
-      .post(`${config.apiurl}/vaults/${vaultId}/follow`);
-    return response.id;
+    if (!this.config?.address) {
+      throw new BadRequest("Missing wallet address in api configuration.");
+    }
+    Logger.log("Following vault: " + vaultId);
+    const wallet = await Arweave.crypto.generateJWK();
+
+    const signer = new ArweaveSigner(wallet);
+
+    const client = new GraphQLClient("https://arweave.net/graphql", { headers: {} });
+    const result = await client.request(queries.followContractQuery, { address: this.config.address }) as any;
+
+    const items = (result?.transactions.edges || []).map((edge: any) => edge.node);
+    const item = items[0];
+
+    let contractId = null;
+    if (!item) {
+      Logger.log("Deploying new follow contract for the user.")
+      try {
+        const FOLLOW_CONTRACT_SRC_ID = "qy9fEK5P5utDiUXaGFjOuIanReh9J-Iu_W0eXycuspE";
+        const { contractTxId } = await smartweave.deployFromSourceTx({
+          wallet: signer,
+          initState: JSON.stringify({ ids: [] }),
+          srcTxId: FOLLOW_CONTRACT_SRC_ID,
+          tags: [
+            new WarpTag("User-Address", this.config.address),
+            new WarpTag("Protocol-Name", "Follow-Contract-Test")
+          ]
+        });
+        Logger.log("Contract deployed with id: " + contractTxId);
+        contractId = contractTxId;
+      } catch (error) {
+        Logger.log("Deploying contract failed.");
+        Logger.log(error);
+        throw new InternalError("Deploying contract failed.");
+      }
+    } else {
+      Logger.log("Retrieved contract id: " + item.id);
+      contractId = item.id;
+    }
+
+    try {
+      const contract = getContract(contractId, wallet);
+      const { originalTxId } = await contract.writeInteraction({
+        function: "follow",
+        id: vaultId
+      }, {
+        tags: [],
+        strict: true,
+        disableBundling: false
+      }) as any;
+      return originalTxId;
+    } catch (error) {
+      Logger.log("Posting contract interaction failed.");
+      Logger.log(error);
+      throw new InternalError("Posting contract interaction failed.");
+    }
+    // const config = apiConfig(this.config.env || "v2");
+    // const response = await new AkordApiClient()
+    //   .post(`${config.apiurl}/vaults/${vaultId}/follow`);
+    // return response.id;
   };
 
   public async vaultFollowList(): Promise<Array<Vault>> {
     if (!this.config?.address) {
       throw new BadRequest("Missing wallet address in api configuration.");
     }
-    const queryResult = await this.client.executeQuery(queries.followContractQuery, { address: this.config.address });
-    const item = queryResult.items[0];
+    const client = new GraphQLClient("https://arweave.net/graphql", { headers: {} });
+    const result = await client.request(queries.followContractQuery, { address: this.config.address }) as any;
+    const items = (result?.transactions.edges || []).map((edge: any) => edge.node);
+    const item = items[0];
     if (!item) return [];
     const ids = (await readContractState<any>(item.id)).ids;
     const vaults = await Promise.all((ids || [])
