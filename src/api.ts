@@ -531,7 +531,11 @@ export default class ExplorerApi extends Api {
         function: "follow",
         id: vaultId
       }, {
-        tags: [],
+        tags: [
+          new WarpTag("Tx-Id", vaultId),
+          new WarpTag("Function-Name", "follow"),
+          new WarpTag("Protocol-Name", "Follow-Contract-Test")
+        ],
         strict: true,
         disableBundling: false
       }) as any;
