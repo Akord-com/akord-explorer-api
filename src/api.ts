@@ -17,7 +17,7 @@ import { ApiConfig, defaultApiConfig, initConfig } from "./config";
 import { Logger } from "./logger";
 import { status, functions, protocolTags, smartweaveTags } from "@akord/akord-js/lib/constants";
 import { readContractState, getContract, smartweave } from "./smartweave";
-import { Arweave, ArweaveSigner } from "arbundles";
+import Arweave from "arweave";
 import { GraphQLClient } from "graphql-request";
 import { Tag as WarpTag } from "warp-contracts";
 
@@ -493,8 +493,6 @@ export default class ExplorerApi extends Api {
     Logger.log("Following vault: " + vaultId);
     const wallet = await Arweave.crypto.generateJWK();
 
-    const signer = new ArweaveSigner(wallet);
-
     const client = new GraphQLClient("https://arweave.net/graphql", { headers: {} });
     const result = await client.request(queries.followContractQuery, { address: this.config.address }) as any;
 
@@ -507,7 +505,7 @@ export default class ExplorerApi extends Api {
       try {
         const FOLLOW_CONTRACT_SRC_ID = "qy9fEK5P5utDiUXaGFjOuIanReh9J-Iu_W0eXycuspE";
         const { contractTxId } = await smartweave.deployFromSourceTx({
-          wallet: signer,
+          wallet: wallet,
           initState: JSON.stringify({ ids: [] }),
           srcTxId: FOLLOW_CONTRACT_SRC_ID,
           tags: [

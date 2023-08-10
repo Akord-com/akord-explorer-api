@@ -1,7 +1,6 @@
 import Arweave from 'arweave';
 import { WarpFactory, LoggerFactory, ArweaveGatewayBundledInteractionLoader, WarpGatewayContractDefinitionLoader, LevelDbCache, ContractCache, SrcCache, DEFAULT_LEVEL_DB_LOCATION } from "warp-contracts";
 import { Vault } from "@akord/akord-js";
-import { DeployPlugin } from 'warp-contracts-plugin-deploy';
 
 const ARWEAVE_ENV = 'mainnet';
 const WARP_CACHE_OPTIONS = {
@@ -22,8 +21,7 @@ const smartweave = WarpFactory
   .forMainnet({
     inMemory: true,
     dbLocation: DEFAULT_LEVEL_DB_LOCATION,
-  })
-  .use(new DeployPlugin());
+  });
 
 // Set up Warp client
 const contractsCache = new LevelDbCache<ContractCache<Vault>>(WARP_CACHE_OPTIONS);
