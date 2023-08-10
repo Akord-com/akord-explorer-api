@@ -551,6 +551,49 @@ export default class ExplorerApi extends Api {
     // return response.id;
   };
 
+
+  public async vaultUnfollow(vaultId: string): Promise<string> {
+    if (!this.config?.address) {
+      throw new BadRequest("Missing wallet address in api configuration.");
+    }
+    Logger.log("Unfollowing vault: " + vaultId);
+    const wallet = await Arweave.crypto.generateJWK();
+
+    const client = new GraphQLClient("https://arweave.net/graphql", { headers: {} });
+    const result = await client.request(queries.followContractQuery, { address: this.config.address }) as any;
+
+    const items = (result?.transactions.edges || []).map((edge: any) => edge.node);
+    const item = items[0];
+
+    if (!item) {
+      throw new BadRequest("The following contract does not exist or has not been confirmed on arweave.");
+    }
+
+    const contractId = item.id;
+    Logger.log("Retrieved contract id: " + item.id);
+
+    try {
+      const contract = getContract(contractId, wallet);
+      const { originalTxId } = await contract.writeInteraction({
+        function: "unfollow",
+        id: vaultId
+      }, {
+        tags: [
+          new WarpTag("Tx-Id", vaultId),
+          new WarpTag("Function-Name", "unfollow"),
+          new WarpTag("Protocol-Name", "Follow-Contract-Test")
+        ],
+        strict: true,
+        disableBundling: false
+      }) as any;
+      return originalTxId;
+    } catch (error) {
+      Logger.log("Posting contract interaction failed.");
+      Logger.log(error);
+      throw new InternalError("Posting contract interaction failed.");
+    }
+  };
+
   public async vaultFollowList(): Promise<Array<Vault>> {
     if (!this.config?.address) {
       throw new BadRequest("Missing wallet address in api configuration.");
