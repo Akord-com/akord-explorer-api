@@ -1082,7 +1082,7 @@ query membershipStatusQuery($id: String!, $protocolName: String!) {
     }
     `;
 
-    const followContractQuery = gql`
+const followContractQuery = gql`
 query followContractQuery($address: String!) {
   transactions(
       sort: HEIGHT_DESC,
@@ -1118,6 +1118,45 @@ query followContractQuery($address: String!) {
     }
     `;
 
+const followersCountQuery = gql`
+    query followersCountQuery($txId: String!) {
+      transactions(
+          sort: HEIGHT_DESC,
+          tags: [
+            {
+              name: "App-Name",
+              values: ["SmartWeaveAction"]
+            },
+            {
+              name: "Function-Name",
+              values: ["follow"]
+            },
+            {
+              name: "Tx-Id",
+              values: [$txId]
+            },
+            {
+              name: "Protocol-Name",
+              values: ["Follow-Contract-Test"]
+            }
+          ]
+          ) {
+            edges {
+              cursor
+              node {
+                  id
+                  tags {
+                    name
+                    value
+                  }
+              }
+            }
+            pageInfo {
+              hasNextPage
+            }      }
+        }
+        `;
+
 export {
   timelineQuery,
   transactionsByVaultIdQuery,
@@ -1145,5 +1184,6 @@ export {
   nodeCreationQuery,
   membershipDataQuery,
   membershipByAddressAndVaultIdQuery,
-  followContractQuery
+  followContractQuery,
+  followersCountQuery
 }

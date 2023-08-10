@@ -616,6 +616,15 @@ export default class ExplorerApi extends Api {
     return vaults.filter((vault: Vault) => vault !== null);
   }
 
+  public async vaultFollowersCount(vaultId: string): Promise<number> {
+    if (!this.config?.address) {
+      throw new BadRequest("Missing wallet address in api configuration.");
+    }
+    const result = await this.client.paginatedQuery(queries.followersCountQuery, { txId: vaultId });
+    // TODO: handle unfollowed vaults
+    return result.length;
+  }
+
   // The explorer API is read-only, hence the following methods are not implemented
 
   public async getMembers(): Promise<any> {
