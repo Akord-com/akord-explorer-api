@@ -11,12 +11,19 @@
   },
   "dependencies": {
     "@akord/akord-js": "4.17.0",
+    "arweave": "1.14.0",
     "dotenv": "^16.0.1",
     "graphql": "15.7.0",
     "graphql-request": "4.3.0",
     "warp-arbundles": "^1.0.4",
     "warp-contracts": "1.4.12",
     "warp-contracts-plugin-deploy": "^1.0.9"
+  },
+  "overrides": {
+    "arweave": "1.14.0"
+  },
+  "resolutions": {
+    "arweave": "1.14.0"
   },
   "devDependencies": {
     "@types/jest": "^27.4.0",

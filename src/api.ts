@@ -20,7 +20,7 @@ import { readContractState, getContract, smartweave } from "./smartweave";
 import Arweave from "arweave";
 import { GraphQLClient } from "graphql-request";
 import { Tag as WarpTag } from "warp-contracts";
-import { ArweaveSigner } from "warp-contracts-plugin-deploy";
+import { ArweaveSigner } from "warp-arbundles";
 
 const DEFAULT_LIMIT = 100, MAX_LIMIT = 100;
 
@@ -513,7 +513,7 @@ export default class ExplorerApi extends Api {
             new WarpTag("User-Address", this.config.address),
             new WarpTag("Protocol-Name", "Follow-Contract-Test")
           ]
-        });
+        }, false);
         Logger.log("Contract deployed with id: " + contractTxId);
         contractId = contractTxId;
       } catch (error) {
