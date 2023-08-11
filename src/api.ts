@@ -20,6 +20,7 @@ import { readContractState, getContract, smartweave } from "./smartweave";
 import Arweave from "arweave";
 import { GraphQLClient } from "graphql-request";
 import { Tag as WarpTag } from "warp-contracts";
+import { ArweaveSigner } from "warp-contracts-plugin-deploy";
 
 const DEFAULT_LIMIT = 100, MAX_LIMIT = 100;
 
@@ -505,7 +506,7 @@ export default class ExplorerApi extends Api {
       try {
         const FOLLOW_CONTRACT_SRC_ID = "qy9fEK5P5utDiUXaGFjOuIanReh9J-Iu_W0eXycuspE";
         const { contractTxId } = await smartweave.deployFromSourceTx({
-          wallet: wallet,
+          wallet: new ArweaveSigner(wallet),
           initState: JSON.stringify({ ids: [] }),
           srcTxId: FOLLOW_CONTRACT_SRC_ID,
           tags: [
