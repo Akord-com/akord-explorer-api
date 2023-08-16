@@ -73,8 +73,8 @@ query transactionsByNodeId($id: String!, $protocolName: String!) {
           values: [$id]
         },
         {
-          name:"Command"
-          values: ["node:create", "node:update", "node:revoke", "node:restore", "node:move"]
+          name: "Command",
+          values: ["node:create", "node:update", "node:revoke", "node:restore", "node:move", "node:delete"]
         },
         {
           name: "Protocol-Name",
@@ -607,7 +607,7 @@ query nodeStatusQuery($id: String!, $protocolName: String!) {
         },
         {
           name: "Command",
-          values: ["node:create", "node:revoke", "node:restore"]
+          values: ["node:create", "node:revoke", "node:restore", "node:delete"]
         },
         {
           name: "Protocol-Name",
@@ -769,7 +769,7 @@ query nodeLastUpdateQuery($id: String!, $protocolName: String!) {
         },
         {
           name: "Command",
-          values: ["node:create", "node:update", "node:restore", "node:revoke"]
+          values: ["node:create", "node:update", "node:restore", "node:revoke", "node:delete"]
         },
         {
           name: "Protocol-Name",
