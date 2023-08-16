@@ -65,7 +65,8 @@ const NODE_PARENT_ID_FUNCTIONS = [
 const NODE_STATUS_FUNCTIONS = [
   functions.NODE_CREATE,
   functions.NODE_REVOKE,
-  functions.NODE_RESTORE
+  functions.NODE_RESTORE,
+  functions.NODE_DELETE
 ] as string[];
 
 const MEMBERSHIP_CREATION_FUNCTIONS = [
@@ -615,12 +616,15 @@ export default class ExplorerApi extends Api {
     const vaultId = this.getTagValue(nodeCreationTx.tags, protocolTags.VAULT_ID);
     const owner = this.getTagValue(nodeCreationTx.tags, protocolTags.SIGNER_ADDRESS);
     const dataTx = JSON.parse(input).data;
-    const state = await this.getNodeState(dataTx, owner);
 
     const statusFunctionName = this.getTagValue(nodeStatusTx.tags, protocolTags.FUNCTION_NAME);
     const nodeStatus = (statusFunctionName === functions.NODE_CREATE || statusFunctionName === functions.NODE_RESTORE)
       ? status.ACTIVE
-      : status.REVOKED;
+      : (statusFunctionName === functions.NODE_REVOKE)
+        ? status.REVOKED
+        : status.DELETED;
+
+    const state = nodeStatus !== status.DELETED ? await this.getNodeState(dataTx, owner) : {};
 
     const parentId = JSON.parse(this.getTagValue(nodeParentIdTx.tags, smartweaveTags.INPUT)).parentId;
 
