@@ -30,6 +30,18 @@ export class ApiClient {
         // filter out Warp tx duplicates
         if (items.length > 1) {
           items = items.filter((node: TxNode) => node.tags.findIndex((tag) => tag.name === "Action" && tag.value === "WarpInteraction") < 0);
+          if (nextToken && items.length * 2 <= variables.limit) {
+            variables.nextToken = nextToken;
+            const result = await this.client.request(query, variables) as GraphQLResult;
+            const hasNextPage = result?.transactions?.pageInfo?.hasNextPage;
+            let nextItems = (result?.transactions.edges || []).map((edge: Edge) => edge.node);
+            items = items.concat(nextItems.filter((node: TxNode) => node.tags.findIndex((tag) => tag.name === "Action" && tag.value === "WarpInteraction") < 0));
+            if (hasNextPage) {
+              nextToken = result?.transactions?.edges?.[result.transactions.edges.length - 1].cursor;
+            } else {
+              nextToken = undefined;
+            }
+          }
         }
         return { items, nextToken };
       } catch (error: any) {

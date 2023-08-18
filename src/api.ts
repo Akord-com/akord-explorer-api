@@ -748,9 +748,6 @@ export default class ExplorerApi extends Api {
     const nodeLastDataTx =
       txs.find((edge: TxNode) => NODE_DATA_FUNCTIONS.includes(this.getTagValue(edge.tags, protocolTags.FUNCTION_NAME)))
       || await this.transactionByObjectIdQuery(id, "nodeDataQuery");
-    const nodeStatusTx =
-      txs.find((edge: TxNode) => NODE_STATUS_FUNCTIONS.includes(this.getTagValue(edge.tags, protocolTags.FUNCTION_NAME)))
-      || await this.transactionByObjectIdQuery(id, "nodeStatusQuery");
 
     const nodeParentIdTx =
       txs.find((edge: TxNode) => NODE_PARENT_ID_FUNCTIONS.includes(this.getTagValue(edge.tags, protocolTags.FUNCTION_NAME)))
@@ -761,16 +758,11 @@ export default class ExplorerApi extends Api {
     const owner = this.getTagValue(nodeCreationTx.tags, protocolTags.SIGNER_ADDRESS);
     const dataTx = JSON.parse(input).data;
 
-    const statusFunctionName = this.getTagValue(nodeStatusTx.tags, protocolTags.FUNCTION_NAME);
-    const nodeStatus = (statusFunctionName === functions.NODE_CREATE || statusFunctionName === functions.NODE_RESTORE)
-      ? status.ACTIVE
-      : (statusFunctionName === functions.NODE_REVOKE)
-        ? status.REVOKED
-        : status.DELETED;
+    const parentId = JSON.parse(this.getTagValue(nodeParentIdTx.tags, smartweaveTags.INPUT)).parentId;
+
+    const nodeStatus = await this.getNodeStatus(id, parentId, txs);
 
     const state = nodeStatus !== status.DELETED ? await this.getNodeState(dataTx, owner) : {};
-
-    const parentId = JSON.parse(this.getTagValue(nodeParentIdTx.tags, smartweaveTags.INPUT)).parentId;
 
     const nodeProto = {
       id: id,
@@ -835,6 +827,24 @@ export default class ExplorerApi extends Api {
       tag?.split(" ").join(",").split(".").join(",").split(",")
         .map((value: string) => processedTags.push(value.toLowerCase())));
     return processedTags;
+  };
+
+  private async getNodeStatus(nodeId: string, parentId: string, txs?: TxNode[]): Promise<string> {
+    // if (!parentId) {
+    const nodeStatusTx =
+      txs?.find((edge: TxNode) => NODE_STATUS_FUNCTIONS.includes(this.getTagValue(edge.tags, protocolTags.FUNCTION_NAME)))
+      || await this.transactionByObjectIdQuery(nodeId, "nodeStatusQuery");
+
+    const functionName = this.getTagValue(nodeStatusTx.tags, protocolTags.FUNCTION_NAME);
+    const nodeStatus = (functionName === functions.NODE_CREATE || functionName === functions.NODE_RESTORE)
+      ? status.ACTIVE
+      : (functionName === functions.NODE_REVOKE)
+        ? status.REVOKED
+        : status.DELETED;
+    return nodeStatus;
+    // } else {
+    //   return (await this.getNodeProto(parentId)).status;
+    // }
   };
 
   private async transactionByObjectIdQuery(id: string, queryName: string): Promise<TxNode> {
