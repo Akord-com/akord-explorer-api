@@ -18,7 +18,6 @@ import { Logger } from "./logger";
 import { status, functions, protocolTags, smartweaveTags } from "@akord/akord-js/lib/constants";
 import { readContractState, getContract, smartweave } from "./smartweave";
 import Arweave from "arweave";
-import { GraphQLClient } from "graphql-request";
 import { Tag as WarpTag } from "warp-contracts";
 import { ArweaveSigner } from "warp-arbundles";
 
@@ -495,10 +494,7 @@ export default class ExplorerApi extends Api {
     Logger.log("Following vault: " + vaultId);
     const wallet = await Arweave.crypto.generateJWK();
 
-    const client = new GraphQLClient("https://arweave.net/graphql", { headers: {} });
-    const result = await client.request(queries.followContractQuery, { address: this.config.address }) as any;
-
-    const items = (result?.transactions.edges || []).map((edge: any) => edge.node);
+    const { items } = await this.client.executeQuery(queries.followContractQuery, { address: this.config.address });
     const item = items[0];
 
     let contractId = null;
@@ -561,10 +557,7 @@ export default class ExplorerApi extends Api {
     Logger.log("Unfollowing vault: " + vaultId);
     const wallet = await Arweave.crypto.generateJWK();
 
-    const client = new GraphQLClient("https://arweave.net/graphql", { headers: {} });
-    const result = await client.request(queries.followContractQuery, { address: this.config.address }) as any;
-
-    const items = (result?.transactions.edges || []).map((edge: any) => edge.node);
+    const { items } = await this.client.executeQuery(queries.followContractQuery, { address: this.config.address });
     const item = items[0];
 
     if (!item) {
@@ -600,10 +593,10 @@ export default class ExplorerApi extends Api {
     if (!this.config?.address) {
       throw new BadRequest("Missing wallet address in api configuration.");
     }
-    const client = new GraphQLClient("https://arweave.net/graphql", { headers: {} });
-    const result = await client.request(queries.followContractQuery, { address: this.config.address }) as any;
-    const items = (result?.transactions.edges || []).map((edge: any) => edge.node);
+
+    const { items } = await this.client.executeQuery(queries.followContractQuery, { address: this.config.address });
     const item = items[0];
+
     if (!item) return [];
     const ids = (await readContractState<any>(item.id)).ids;
     const vaults = await Promise.all((ids || [])
