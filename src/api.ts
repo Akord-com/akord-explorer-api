@@ -531,6 +531,7 @@ export default class ExplorerApi extends Api {
       }, {
         tags: [
           new WarpTag("Tx-Id", vaultId),
+          new WarpTag("User-Address", this.config.address),
           new WarpTag("Function-Name", "follow"),
           new WarpTag("Protocol-Name", "Follow-Contract-Test")
         ],
@@ -575,6 +576,7 @@ export default class ExplorerApi extends Api {
       }, {
         tags: [
           new WarpTag("Tx-Id", vaultId),
+          new WarpTag("User-Address", this.config.address),
           new WarpTag("Function-Name", "unfollow"),
           new WarpTag("Protocol-Name", "Follow-Contract-Test")
         ],
