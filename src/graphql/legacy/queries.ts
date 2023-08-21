@@ -264,8 +264,10 @@ query membershipsByVaultId($vaultId: String!, $protocolName: String!, $limit: In
     `;
 
 const vaultsByTagsQuery = gql`
-query vaultsByTags($tags: [String!]!, $protocolName: String!) {
+query vaultsByTags($tags: [String!]!, $protocolName: String!, $limit: Int, $nextToken: String) {
   transactions(
+      first: $limit,
+      after: $nextToken,
       tags: [
         {
           name: "Akord-Tag",
@@ -306,8 +308,10 @@ query vaultsByTags($tags: [String!]!, $protocolName: String!) {
     `;
 
 const listPublicVaultsQuery = gql`
-query listPublicVaults($protocolName: String!) {
+query listPublicVaults($protocolName: String!, $limit: Int, $nextToken: String) {
   transactions(
+      first: $limit,
+      after: $nextToken,
       tags: [
         {
           name: "Command",
@@ -344,8 +348,10 @@ query listPublicVaults($protocolName: String!) {
     `;
 
 const listPublicNodesByTypeQuery = gql`
-query listPublicNodesByTypeQuery($type: String!, $protocolName: String!) {
+query listPublicNodesByTypeQuery($type: String!, $protocolName: String!, $limit: Int, $nextToken: String) {
   transactions(
+      first: $limit,
+      after: $nextToken,
       tags: [
         {
           name: "Command",

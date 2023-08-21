@@ -622,7 +622,7 @@ export default class ExplorerApi extends Api {
     if (!this.config?.address) {
       throw new BadRequest("Missing wallet address in api configuration.");
     }
-    const result = await this.client.paginatedQuery(queries.followersCountQuery, { txId: vaultId });
+    const result = await this.client.paginatedQuery(queries.followersCountQuery, { txId: vaultId, limit: 100 });
     // TODO: handle unfollowed vaults
     return result.length;
   }
