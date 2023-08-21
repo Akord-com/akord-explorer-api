@@ -1,6 +1,12 @@
+export const GatewayUrls = [
+  "https://arweave.net/",
+  "https://ar-io.net/",
+  "https://g8way.io/"
+];
+
 export const defaultApiConfig = {
   env: "v2",
-  arweaveUrl: "https://arweave.net/",
+  arweaveUrl: GatewayUrls[0],
 } as ApiConfig;
 
 export const initConfig = (config: ApiConfig = defaultApiConfig) => {

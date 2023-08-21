@@ -1,5 +1,5 @@
 import { GraphQLClient } from "graphql-request";
-import { ApiConfig } from "../config";
+import { ApiConfig, GatewayUrls } from "../config";
 import { Logger } from "../logger";
 import { InternalError } from "@akord/akord-js/lib/errors/internal-error";
 
@@ -50,6 +50,13 @@ export class ApiClient {
         if (error?.response?.status === 504) {
           Logger.log("Retrying...");
           retryCount++;
+          Logger.log("Retry count: " + retryCount);
+        } else if (error?.response?.status === 429 || error?.response?.status === 503) {
+          Logger.log("Retrying with another gateway...");
+          retryCount++;
+          this.config.arweaveUrl = GatewayUrls[retryCount % GatewayUrls.length];
+          this.client = new GraphQLClient(this.config.arweaveUrl + "graphql", { headers: {} });
+          Logger.log("Gateway: " + this.config.arweaveUrl);
           Logger.log("Retry count: " + retryCount);
         } else {
           throw error;
