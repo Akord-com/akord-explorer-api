@@ -6532,10 +6532,10 @@ warp-contracts-plugin-deploy@^1.0.9:
     arlocal "^1.1.59"
     node-stdlib-browser "^1.2.0"
 
-warp-contracts@1.4.12:
-  version "1.4.12"
-  resolved "https://registry.yarnpkg.com/warp-contracts/-/warp-contracts-1.4.12.tgz#b1681fc0b81e9128c272d7ce8f417319ce5fb969"
-  integrity sha512-DjmxN4U26jzYhlumTj1QgxH1GPmjN2oAkTXDGBvXSpdLYvf0n3aGJLBVYddfH9P/IQlxcQJ6KaXS4Ihlq9FrAw==
+warp-contracts@1.4.17:
+  version "1.4.17"
+  resolved "https://registry.yarnpkg.com/warp-contracts/-/warp-contracts-1.4.17.tgz#0116dfbb9b9ce3a5e502944c5157f1c54ec80546"
+  integrity sha512-ZsZaASvrfNk5EwFti+o4JaqTCYsi9BCKoBPD9Wm68aohFcxoGyc97G+eBd+ghnTCal83xwpNuO8+tRmIXUOuQA==
   dependencies:
     archiver "^5.3.0"
     arweave "1.13.7"
@@ -6548,21 +6548,14 @@ warp-contracts@1.4.12:
     safe-stable-stringify "2.4.1"
     stream-buffers "^3.0.2"
     unzipit "^1.4.0"
-    warp-isomorphic "1.0.4"
+    warp-arbundles "^1.0.4"
+    warp-isomorphic "^1.0.7"
     warp-wasm-metering "1.0.1"
 
 warp-isomorphic@1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/warp-isomorphic/-/warp-isomorphic-1.0.0.tgz#dccccfc046bc6ac77919f8be1024ced1385c70ea"
   integrity sha512-E+9+brlrnZoNpNvpz8foIZiCk9fIVukRBZYEy/yefM+oAG+zNgDPb/xNaZyUJWC8rSZxE1DqrhRl0JxjtLVltA==
-  dependencies:
-    buffer "^6.0.3"
-    undici "^5.8.0"
-
-warp-isomorphic@1.0.4:
-  version "1.0.4"
-  resolved "https://registry.yarnpkg.com/warp-isomorphic/-/warp-isomorphic-1.0.4.tgz#1017eba260e0f0228b33b94b9e36a1afe54e09d8"
-  integrity sha512-W77IoLjq/eu5bY1uRrlmVt5lLDoIHeZ0ozJ/j67FTnxvZRXu887biEnom1nx8q1UgOKyJh8eQYFQaE2FLlKhFg==
   dependencies:
     buffer "^6.0.3"
     undici "^5.8.0"
