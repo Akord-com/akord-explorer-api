@@ -1,10 +1,13 @@
 import { gql } from "graphql-request";
 
-const TxNode = gql`
-  fragment TxNode on TransactionEdge {
+const TxNode = `
     edges {
       cursor
       node {
+          block {
+            height
+            timestamp
+          }
           id
           tags {
             name
@@ -41,22 +44,8 @@ query transactionsByVaultId($id: String!, $protocolName: String!) {
           values: [$protocolName, "Akord-Test"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const transactionsByNodeIdQuery = gql`
 query transactionsByNodeId($id: String!, $protocolName: String!) {
@@ -81,22 +70,8 @@ query transactionsByNodeId($id: String!, $protocolName: String!) {
           values: [$protocolName, "Akord-Test"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const transactionsByMembershipIdQuery = gql`
     query transactionsByMembershipId($id: String!, $protocolName: String!) {
@@ -121,22 +96,8 @@ const transactionsByMembershipIdQuery = gql`
               values: [$protocolName, "Akord-Test"]
             }
           ]
-          ) {
-            edges {
-              cursor
-              node {
-                  id
-                  tags {
-                    name
-                    value
-                  }
-              }
-            }
-            pageInfo {
-              hasNextPage
-            }      }
-        }
-        `;
+          ) { ${TxNode} }
+          `;
 
 const membershipsByAddressQuery = gql`
     query membershipsByAddress($address: String!, $protocolName: String!, $limit: Int, $nextToken: String) {
@@ -158,22 +119,8 @@ const membershipsByAddressQuery = gql`
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const nodesByVaultIdAndTypeQuery = gql`
 query nodesByVaultIdAndType($vaultId: String!, $type: String!, $protocolName: String!, $limit: Int, $nextToken: String) {
@@ -203,23 +150,8 @@ query nodesByVaultIdAndType($vaultId: String!, $type: String!, $protocolName: St
           values: ["SmartWeaveAction"]
         }
       ]
-  ) {
-    edges {
-      cursor
-      node {
-          id
-          tags {
-            name
-            value
-          }
-      }
-    }
-    pageInfo {
-      hasNextPage
-    }
-  }
-}
-`;
+      ) { ${TxNode} }
+      `;
 
 const membershipsByVaultIdQuery = gql`
 query membershipsByVaultId($vaultId: String!, $protocolName: String!, $limit: Int, $nextToken: String) {
@@ -245,23 +177,8 @@ query membershipsByVaultId($vaultId: String!, $protocolName: String!, $limit: In
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }
-      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const vaultsByTagsQuery = gql`
 query vaultsByTags($tags: [String!]!, $protocolName: String!, $limit: Int, $nextToken: String) {
@@ -290,22 +207,8 @@ query vaultsByTags($tags: [String!]!, $protocolName: String!, $limit: Int, $next
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const listPublicVaultsQuery = gql`
 query listPublicVaults($protocolName: String!, $limit: Int, $nextToken: String) {
@@ -330,22 +233,8 @@ query listPublicVaults($protocolName: String!, $limit: Int, $nextToken: String) 
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const listPublicNodesByTypeQuery = gql`
 query listPublicNodesByTypeQuery($type: String!, $protocolName: String!, $limit: Int, $nextToken: String) {
@@ -374,22 +263,8 @@ query listPublicNodesByTypeQuery($type: String!, $protocolName: String!, $limit:
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const nodesByTagsAndTypeQuery = gql`
 query nodesByTagsAndType($tags: [String!]!, $type: String!, $protocolName: String!) {
@@ -420,22 +295,8 @@ query nodesByTagsAndType($tags: [String!]!, $type: String!, $protocolName: Strin
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const vaultDataQuery = gql`
 query vaultDataQuery($id: String!, $protocolName: String!) {
@@ -460,22 +321,8 @@ query vaultDataQuery($id: String!, $protocolName: String!) {
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const nodeDataQuery = gql`
 query nodeDataQuery($id: String!, $protocolName: String!) {
@@ -500,22 +347,8 @@ query nodeDataQuery($id: String!, $protocolName: String!) {
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const membershipDataQuery = gql`
 query membershipQuery($id: String!, $protocolName: String!) {
@@ -540,22 +373,8 @@ query membershipQuery($id: String!, $protocolName: String!) {
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const membershipByAddressAndVaultIdQuery = gql`
 query membershipQuery($address: String!, $vaultId: String!, $protocolName: String!) {
@@ -584,22 +403,8 @@ query membershipQuery($address: String!, $vaultId: String!, $protocolName: Strin
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const nodeStatusQuery = gql`
 query nodeStatusQuery($id: String!, $protocolName: String!) {
@@ -624,23 +429,8 @@ query nodeStatusQuery($id: String!, $protocolName: String!) {
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
-
+      ) { ${TxNode} }
+      `;
 
 const nodeParentIdQuery = gql`
 query nodeParentIdQuery($id: String!, $protocolName: String!) {
@@ -665,23 +455,8 @@ query nodeParentIdQuery($id: String!, $protocolName: String!) {
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
-
+      ) { ${TxNode} }
+      `;
 
 const vaultStatusQuery = gql`
 query vaultStatusQuery($id: String!, $protocolName: String!) {
@@ -706,22 +481,8 @@ query vaultStatusQuery($id: String!, $protocolName: String!) {
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const vaultLastUpdateQuery = gql`
 query vaultLastUpdateQuery($id: String!, $protocolName: String!) {
@@ -746,22 +507,8 @@ query vaultLastUpdateQuery($id: String!, $protocolName: String!) {
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const nodeLastUpdateQuery = gql`
 query nodeLastUpdateQuery($id: String!, $protocolName: String!) {
@@ -786,22 +533,8 @@ query nodeLastUpdateQuery($id: String!, $protocolName: String!) {
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const membershipLastUpdateQuery = gql`
 query membershipLastUpdateQuery($id: String!, $protocolName: String!) {
@@ -826,22 +559,8 @@ query membershipLastUpdateQuery($id: String!, $protocolName: String!) {
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const vaultCreationQuery = gql`
 query vaultCreationQuery($id: String!, $protocolName: String!) {
@@ -866,22 +585,8 @@ query vaultCreationQuery($id: String!, $protocolName: String!) {
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const nodeCreationQuery = gql`
 query nodeCreationQuery($id: String!, $protocolName: String!) {
@@ -906,22 +611,8 @@ query nodeCreationQuery($id: String!, $protocolName: String!) {
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const membershipCreationQuery = gql`
 query membershipCreationQuery($id: String!, $protocolName: String!) {
@@ -946,22 +637,8 @@ query membershipCreationQuery($id: String!, $protocolName: String!) {
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 const membershipStatusQuery = gql`
 query membershipStatusQuery($id: String!, $protocolName: String!) {
@@ -986,22 +663,8 @@ query membershipStatusQuery($id: String!, $protocolName: String!) {
           values: ["SmartWeaveAction"]
         }
       ]
-      ) {
-        edges {
-          cursor
-          node {
-              id
-              tags {
-                name
-                value
-              }
-          }
-        }
-        pageInfo {
-          hasNextPage
-        }      }
-    }
-    `;
+      ) { ${TxNode} }
+      `;
 
 export {
   transactionsByVaultIdQuery,

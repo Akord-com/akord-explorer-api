@@ -83,6 +83,10 @@ export class ApiClient {
   }
 }
 export type TxNode = {
+  block: {
+    timestamp: number,
+    height: number,
+  },
   id: string
   tags: {
     name: string

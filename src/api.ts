@@ -618,8 +618,30 @@ export default class ExplorerApi extends Api {
       throw new BadRequest("Missing wallet address in api configuration.");
     }
     const result = await this.client.paginatedQuery(queries.followersCountQuery, { txId: vaultId, limit: 100 });
-    // TODO: handle unfollowed vaults
-    return result.length;
+    const groupByUserAddress = [] as any;
+    let count = 0;
+    result.map((node: TxNode) => {
+      const address = node.tags.find((tag: Tag) => tag.name === "User-Address")?.value as any;
+      if (address) {
+        if (groupByUserAddress[address]) {
+          (groupByUserAddress[address] || []).push(node);
+        } else {
+          groupByUserAddress[address] = [node];
+        }
+      }
+    });
+
+    for (let [key, group] of Object.entries(groupByUserAddress)) {
+      const sorted = (<any>group).sort(function (a: TxNode, b: TxNode) {
+        return b.block.timestamp - a.block.timestamp;
+      })
+      const lastUserTx = Object.values(sorted)[0] as TxNode;
+      const functionName = lastUserTx.tags.find((tag: Tag) => tag.name === "Function-Name")?.value as any;
+      if (functionName === "follow") {
+        count++;
+      }
+    }
+    return count;
   }
 
   // The explorer API is read-only, hence the following methods are not implemented
@@ -1001,7 +1023,6 @@ const formatDates = (state: any) => {
   }
   return state;
 }
-
 
 const getDateFromTimestamp = (timestamp: string): Date => {
   return new Date(JSON.parse(timestamp));
