@@ -28,10 +28,6 @@ query transactionsByVaultId($id: String!, $protocolName: String!) {
       first: 100,
       tags: [
         {
-          name: "App-Name",
-          values: ["SmartWeaveAction"]
-        },
-        {
           name: "Vault-Id",
           values: [$id]
         },
@@ -42,7 +38,11 @@ query transactionsByVaultId($id: String!, $protocolName: String!) {
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
-        }
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
+        },
       ]
       ) { ${TxNode} }
       `;
@@ -54,10 +54,6 @@ query transactionsByNodeId($id: String!, $protocolName: String!) {
       first: 100,
       tags: [
         {
-          name: "App-Name",
-          values: ["SmartWeaveAction"]
-        },
-        {
           name: "Node-Id",
           values: [$id]
         },
@@ -68,6 +64,10 @@ query transactionsByNodeId($id: String!, $protocolName: String!) {
         {
           name: "Protocol-Name",
           values: [$protocolName, "Akord-Test"]
+        },
+        {
+          name: "App-Name",
+          values: ["SmartWeaveAction"]
         }
       ]
       ) { ${TxNode} }
@@ -80,10 +80,6 @@ const transactionsByMembershipIdQuery = gql`
           first: 100,
           tags: [
             {
-              name: "App-Name",
-              values: ["SmartWeaveAction"]
-            },
-            {
               name: "Membership-Id",
               values: [$id]
             },
@@ -94,6 +90,10 @@ const transactionsByMembershipIdQuery = gql`
             {
               name: "Protocol-Name",
               values: [$protocolName, "Akord-Test"]
+            },
+            {
+              name: "App-Name",
+              values: ["SmartWeaveAction"]
             }
           ]
           ) { ${TxNode} }
@@ -195,12 +195,12 @@ query vaultsByTags($tags: [String!]!, $protocolName: String!, $limit: Int, $next
           values: ["vault:init", "vault:update"]
         },
         {
-          name: "Protocol-Name",
-          values: [$protocolName, "Akord-Test"]
-        },
-        {
           name: "Public",
           values: ["true"]
+        },
+        {
+          name: "Protocol-Name",
+          values: [$protocolName, "Akord-Test"]
         },
         {
           name: "App-Name",
@@ -221,12 +221,12 @@ query listPublicVaults($protocolName: String!, $limit: Int, $nextToken: String) 
           values: ["vault:init"]
         },
         {
-          name: "Protocol-Name",
-          values: [$protocolName, "Akord-Test"]
-        },
-        {
           name: "Public",
           values: ["true"]
+        },
+        {
+          name: "Protocol-Name",
+          values: [$protocolName, "Akord-Test"]
         },
         {
           name: "App-Name",
@@ -247,16 +247,16 @@ query listPublicNodesByTypeQuery($type: String!, $protocolName: String!, $limit:
           values: ["node:create"]
         },
         {
-          name: "Protocol-Name",
-          values: [$protocolName, "Akord-Test"]
+          name: "Node-Type",
+          values: [$type]
         },
         {
           name: "Public",
           values: ["true"]
         },
         {
-          name: "Node-Type",
-          values: [$type]
+          name: "Protocol-Name",
+          values: [$protocolName, "Akord-Test"]
         },
         {
           name: "App-Name",
@@ -279,16 +279,16 @@ query nodesByTagsAndType($tags: [String!]!, $type: String!, $protocolName: Strin
           values: ["node:create", "node:update"]
         },
         {
-          name: "Protocol-Name",
-          values: [$protocolName, "Akord-Test"]
+          name: "Node-Type",
+          values: [$type]
         },
         {
           name: "Public",
           values: ["true"]
         },
         {
-          name: "Node-Type",
-          values: [$type]
+          name: "Protocol-Name",
+          values: [$protocolName, "Akord-Test"]
         },
         {
           name: "App-Name",
@@ -383,16 +383,16 @@ query membershipQuery($address: String!, $vaultId: String!, $protocolName: Strin
     first: 1,
       tags: [
         {
+          name: "Member-Address",
+          values: [$address]
+        },
+        {
           name: "Vault-Id",
           values: [$vaultId]
         },
         {
           name: "Command",
           values: ["vault:init", "membership:invite", "membership:add"]
-        },
-        {
-          name: "Member-Address",
-          values: [$address]
         },
         {
           name: "Protocol-Name",
