@@ -1,6 +1,6 @@
 import { gql } from "graphql-request";
 
-const TxNode = `
+export const TxNode = `
     edges {
       cursor
       node {
@@ -138,7 +138,7 @@ query membershipsByAddress($address: String!, $protocolName: String!, $limit: In
         },
         {
           name: "App-Name",
-          values: ["SmartWeaveAction"]
+          values: ["SmartWeaveAction", "SmartWeaveContract"]
         }
       ]
       ) { ${TxNode} }

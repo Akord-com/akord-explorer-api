@@ -1,25 +1,5 @@
 import { gql } from "graphql-request";
-
-const TxNode = `
-    edges {
-      cursor
-      node {
-          block {
-            height
-            timestamp
-          }
-          id
-          tags {
-            name
-            value
-          }
-      }
-    }
-    pageInfo {
-      hasNextPage
-    }
-  }
-`
+import { TxNode } from "../queries";
 
 const transactionsByVaultIdQuery = gql`
 query transactionsByVaultId($id: String!, $protocolName: String!) {
@@ -116,7 +96,7 @@ const membershipsByAddressQuery = gql`
         },
         {
           name: "App-Name",
-          values: ["SmartWeaveAction"]
+          values: ["SmartWeaveAction", "SmartWeaveContract"]
         }
       ]
       ) { ${TxNode} }

@@ -6,6 +6,7 @@ import { ListOptions, VaultApiGetOptions } from "@akord/akord-js/lib/types/query
 import { getTxData, getTxMetadata } from "@akord/akord-js/lib/arweave";
 import * as queries from "./graphql/queries";
 import * as legacyQueries from "./graphql/legacy/queries";
+import * as migrationQueries from "./graphql/legacy/migration/queries";
 import { ApiClient, TxNode } from "./graphql/client";
 import { EncryptionMetadata } from "@akord/akord-js/lib/core";
 import { NotFound } from "@akord/akord-js/lib/errors/not-found";
@@ -35,7 +36,8 @@ type VaultContext = {
   __public__: boolean,
   __cacheOnly__: boolean,
   __keys__: EncryptedKeys[],
-  __publicKey__: string
+  __publicKey__: string,
+  __vault__?: Vault
 };
 
 const DEFAULT_VAULT_CONTEXT = {
@@ -138,7 +140,11 @@ export default class ExplorerApi extends Api {
     }
     const vaultProto = await this.getVaultProto(id);
     let keys: EncryptedKeys[] = [];
-    if (!vaultProto.public) {
+    if (!vaultProto.public && vaultProto.memberships && vaultProto.memberships.length > 0) {
+      const membership = this.getCurrentMember(vaultProto.memberships);
+      const state = await this.getNodeState(this.getDataTx(membership));
+      keys = state?.keys;
+    } else if (!vaultProto.public) {
       const membership = await this.getCurrentMembership(id);
       keys = membership?.keys;
     }
@@ -324,7 +330,7 @@ export default class ExplorerApi extends Api {
     const promises = items
       .map(async (item: TxNode) => {
         if (item && item.tags) {
-          const vaultId = this.getTagValue(item.tags, "Contract");
+          const vaultId = this.getTagValue(item.tags, "Contract") || this.getTagValue(item.tags, "Uploader-Tx-Id");
           try {
             const vault = await this.getVault(vaultId);
             vault.keys = vault.__keys__;
@@ -357,7 +363,24 @@ export default class ExplorerApi extends Api {
       items = result.items;
       nextToken = result.nextToken;
     }
+    let nodesUponCreation = [];
     const vaultContext = await this.getVaultContext(vaultId);
+    if (vaultContext.__vault__?.nodes && vaultContext.__vault__?.nodes.length > 0) {
+      nodesUponCreation = await Promise.all(vaultContext.__vault__.nodes
+        .map(async (node: NodeLike) => {
+          if (node.type === type) {
+            try {
+              return await this.downloadObject(node);
+            } catch (error) {
+              Logger.log(error);
+              return null;
+            }
+          } else {
+            return null;
+          }
+        }));
+      nodesUponCreation = nodesUponCreation.filter((node: NodeLike) => node !== null);
+    }
     const promises = items
       .map(async (item: TxNode) => {
         const nodeId = this.getTagValue(item.tags, protocolTags.NODE_ID);
@@ -365,7 +388,7 @@ export default class ExplorerApi extends Api {
         return nodeLikeFactory(formatDates(node), type, vaultContext) as T;
       }) as Promise<T>[];
     const { items: nodes, errors } = await this.handleListErrors<T>(items as any, promises);
-    return { items: this.filterByStatus(options.filter, nodes), nextToken, errors };
+    return { items: this.filterByStatus(options.filter, nodes.concat(nodesUponCreation)), nextToken, errors };
   };
 
   public async getMembershipsByVaultId(vaultId: string, options: ListOptions): Promise<Paginated<Membership>> {
@@ -380,7 +403,6 @@ export default class ExplorerApi extends Api {
         return new Membership(formatDates(membershipProto), vaultContext.__keys__);
       }) as Promise<Membership>[];
     const { items: memberships, errors } = await this.handleListErrors<Membership>(items as any, promises);
-    const results = await Promise.all(promises.map(p => p.catch(e => e)));
     return { items: this.filterByStatus(options.filter, memberships), nextToken: nextPage, errors };
   };
 
@@ -730,6 +752,35 @@ export default class ExplorerApi extends Api {
       txs.find((edge: TxNode) => VAULT_STATUS_FUNCTIONS.includes(this.getTagValue(edge.tags, protocolTags.FUNCTION_NAME)))
       || await this.transactionByObjectIdQuery(id, "vaultStatusQuery");
 
+    if (!vaultCreationTx) {
+      const vaultInitTx = (await this.client.executeQuery(migrationQueries.vaultCreationQuery, { id })).items[0];
+      if (!vaultInitTx) {
+        throw new NotFound("Cannot find corresponding vault transaction.");
+      }
+      const vaultInitState = await this.getNodeState(vaultInitTx.id);
+      const vaultProto = JSON.parse(Arweave.utils.b64UrlToString(vaultInitState.data)) as Vault;
+      const dataTx = vaultProto.data[vaultProto.data.length - 1];
+      const state = await this.getNodeState(dataTx);
+      let vaultState = { ...vaultProto, ...state };
+      if (vaultLastUpdateTx) {
+        vaultState.updatedAt = this.getTagValue(vaultLastUpdateTx.tags, protocolTags.TIMESTAMP);
+      }
+      if (vaultStatusTx) {
+        const statusFunctionName = this.getTagValue(vaultStatusTx.tags, protocolTags.FUNCTION_NAME);
+        const vaultStatus = (statusFunctionName === functions.VAULT_CREATE || statusFunctionName === functions.VAULT_RESTORE)
+          ? status.ACTIVE
+          : status.ARCHIVED;
+
+        vaultState.status = vaultStatus;
+      }
+      if (vaultLastDataTx) {
+        const input = this.getTagValue(vaultLastDataTx.tags, smartweaveTags.INPUT);
+        const dataTx = JSON.parse(input).data;
+        const state = await this.getNodeState(dataTx);
+        vaultState = { ...vaultState, state };
+      }
+      return vaultState;
+    }
     const statusFunctionName = this.getTagValue(vaultStatusTx.tags, protocolTags.FUNCTION_NAME);
     const vaultStatus = (statusFunctionName === functions.VAULT_CREATE || statusFunctionName === functions.VAULT_RESTORE)
       ? status.ACTIVE
@@ -871,7 +922,8 @@ export default class ExplorerApi extends Api {
       const { items } = await this.client.executeQuery((legacyQueries as any)[queryName], { id });
       item = items[0];
       if (!item) {
-        throw new NotFound("Cannot find corresponding transaction: " + queryName + " for object with id: " + id);
+        console.warn("Cannot find corresponding transaction: " + queryName + " for object with id: " + id)
+        //throw new NotFound("Cannot find corresponding transaction: " + queryName + " for object with id: " + id);
       }
     }
     return item;
@@ -953,10 +1005,11 @@ export default class ExplorerApi extends Api {
         tagValue = tags.find((tag: Tag) => tag.name === "Command")?.value;
       }
       if (!tagValue) {
-        throw new NotFound("Cannot find tag value for: " + name);
+        console.warn("Cannot find tag value for: " + name)
+        //throw new NotFound("Cannot find tag value for: " + name);
       }
     }
-    return tagValue;
+    return tagValue as any;
   }
 
   private async getCurrentMembership(vaultId: string): Promise<Membership> {
@@ -975,6 +1028,30 @@ export default class ExplorerApi extends Api {
 
   private async getVaultContext(vaultId: string): Promise<VaultContext> {
     const vaultCreationTx = await this.transactionByObjectIdQuery(vaultId, "vaultCreationQuery");
+    if (!vaultCreationTx) {
+      const vaultInitTx = (await this.client.executeQuery(migrationQueries.vaultCreationQuery, { id: vaultId })).items[0];
+      if (!vaultInitTx) {
+        throw new NotFound("Cannot find corresponding vault transaction.");
+      }
+      const vaultInitState = await this.getNodeState(vaultInitTx.id);
+      const vaultProto = JSON.parse(Arweave.utils.b64UrlToString(vaultInitState.data)) as Vault;
+      const dataTx = vaultProto.data[vaultProto.data.length - 1];
+      const state = await this.getNodeState(dataTx);
+      let vaultState = { ...vaultProto, ...state };
+      const vaultContext = {
+        __public__: vaultState.public,
+        __cacheOnly__: false,
+        __keys__: [] as EncryptedKeys[],
+        __publicKey__: null as any,
+        __vault__: vaultState
+      };
+      if (!vaultState.public) {
+        const membership = this.getCurrentMember(vaultState.memberships);
+        const state = await this.getNodeState(this.getDataTx(membership));
+        vaultContext.__keys__ = state?.keys;
+      }
+      return vaultContext;
+    }
     const isPublic = this.getTagValue(vaultCreationTx.tags, protocolTags.PUBLIC) === "true" ? true : false;
     const vaultContext = {
       __public__: isPublic,
