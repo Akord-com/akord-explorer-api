@@ -761,7 +761,7 @@ export default class ExplorerApi extends Api {
       const vaultProto = JSON.parse(Arweave.utils.b64UrlToString(vaultInitState.data)) as Vault;
       const dataTx = vaultProto.data[vaultProto.data.length - 1];
       const state = await this.getNodeState(dataTx);
-      let vaultState = { ...vaultProto, ...state };
+      let vaultState = { ...vaultProto, ...state, id: id };
       if (vaultLastUpdateTx) {
         vaultState.updatedAt = this.getTagValue(vaultLastUpdateTx.tags, protocolTags.TIMESTAMP);
       }
@@ -1037,7 +1037,7 @@ export default class ExplorerApi extends Api {
       const vaultProto = JSON.parse(Arweave.utils.b64UrlToString(vaultInitState.data)) as Vault;
       const dataTx = vaultProto.data[vaultProto.data.length - 1];
       const state = await this.getNodeState(dataTx);
-      let vaultState = { ...vaultProto, ...state };
+      let vaultState = { ...vaultProto, ...state, id: vaultId };
       const vaultContext = {
         __public__: vaultState.public,
         __cacheOnly__: false,
