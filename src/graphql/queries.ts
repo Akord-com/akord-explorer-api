@@ -219,7 +219,7 @@ query membershipsByVaultId($vaultId: String!, $protocolName: String!, $limit: In
       tags: [
         {
           name: "Vault-Id",
-          values: [$id]
+          values: [$vaultId]
         },
         {
           name: "Function-Name",

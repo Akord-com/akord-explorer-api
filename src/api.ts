@@ -363,8 +363,8 @@ export default class ExplorerApi extends Api {
       items = result.items;
       nextToken = result.nextToken;
     }
-    let nodesUponCreation = [];
     const vaultContext = await this.getVaultContext(vaultId);
+    let nodesUponCreation = [];
     if (vaultContext.__vault__?.nodes && vaultContext.__vault__?.nodes.length > 0) {
       nodesUponCreation = await Promise.all(vaultContext.__vault__.nodes
         .map(async (node: NodeLike) => {
@@ -395,6 +395,19 @@ export default class ExplorerApi extends Api {
     const { items, nextToken: nextPage } = await this.client.executeQuery(queries.membershipsByVaultIdQuery,
       { vaultId, nextToken: options.nextToken, limit: getLimit(options.limit) });
     const vaultContext = await this.getVaultContext(vaultId);
+    let membershipsUponCreation = [];
+    if (vaultContext.__vault__?.memberships && vaultContext.__vault__?.memberships.length > 0) {
+      membershipsUponCreation = await Promise.all(vaultContext.__vault__.memberships
+        .map(async (membership: Membership) => {
+          try {
+            return await this.downloadObject(membership);
+          } catch (error) {
+            Logger.log(error);
+            return null;
+          }
+        }));
+      membershipsUponCreation = membershipsUponCreation.filter((membership: Membership) => membership !== null);
+    }
     const promises = items
       .map(async (item: TxNode) => {
         const membershipId = this.getTagValue(item.tags, protocolTags.MEMBERSHIP_ID);
@@ -403,7 +416,7 @@ export default class ExplorerApi extends Api {
         return new Membership(formatDates(membershipProto), vaultContext.__keys__);
       }) as Promise<Membership>[];
     const { items: memberships, errors } = await this.handleListErrors<Membership>(items as any, promises);
-    return { items: this.filterByStatus(options.filter, memberships), nextToken: nextPage, errors };
+    return { items: this.filterByStatus(options.filter, memberships.concat(membershipsUponCreation)), nextToken: nextPage, errors };
   };
 
   public async getTransactions(vaultId: string): Promise<Array<Transaction>> {
