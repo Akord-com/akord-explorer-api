@@ -585,7 +585,6 @@ export default class ExplorerApi extends Api {
     // return response.id;
   };
 
-
   public async vaultUnfollow(vaultId: string): Promise<string> {
     if (!this.config?.address) {
       throw new BadRequest("Missing wallet address in api configuration.");
@@ -751,72 +750,16 @@ export default class ExplorerApi extends Api {
   private async getVaultProto(id: string): Promise<Vault> {
     const txs = await this.transactionsByObjectIdQuery(id, "transactionsByVaultIdQuery");
 
-    const vaultCreationTx =
-      txs.find((edge: TxNode) => this.getTagValue(edge.tags, protocolTags.FUNCTION_NAME) === functions.VAULT_CREATE)
-      || await this.transactionByObjectIdQuery(id, "vaultCreationQuery");
+    const vaultProto = await this.getVaultInitState(id, txs) as Vault;
+
+    vaultProto.status = await this.getVaultStatus(id, txs);
 
     const vaultLastUpdateTx = txs[0];
-
-    const vaultLastDataTx =
-      txs.find((edge: TxNode) => VAULT_DATA_FUNCTIONS.includes(this.getTagValue(edge.tags, protocolTags.FUNCTION_NAME)))
-      || await this.transactionByObjectIdQuery(id, "vaultDataQuery");
-
-    const vaultStatusTx =
-      txs.find((edge: TxNode) => VAULT_STATUS_FUNCTIONS.includes(this.getTagValue(edge.tags, protocolTags.FUNCTION_NAME)))
-      || await this.transactionByObjectIdQuery(id, "vaultStatusQuery");
-
-    if (!vaultCreationTx) {
-      const vaultInitTx = (await this.client.executeQuery(migrationQueries.vaultCreationQuery, { id })).items[0];
-      if (!vaultInitTx) {
-        throw new NotFound("Cannot find corresponding vault transaction.");
-      }
-      const vaultInitState = await this.getNodeState(vaultInitTx.id);
-      const vaultProto = JSON.parse(Arweave.utils.b64UrlToString(vaultInitState.data)) as Vault;
-      const dataTx = vaultProto.data[vaultProto.data.length - 1];
-      const state = await this.getNodeState(dataTx);
-      let vaultState = { ...vaultProto, ...state, id: id };
-      if (vaultLastUpdateTx) {
-        vaultState.updatedAt = this.getTagValue(vaultLastUpdateTx.tags, protocolTags.TIMESTAMP);
-      }
-      if (vaultStatusTx) {
-        const statusFunctionName = this.getTagValue(vaultStatusTx.tags, protocolTags.FUNCTION_NAME);
-        const vaultStatus = (statusFunctionName === functions.VAULT_CREATE || statusFunctionName === functions.VAULT_RESTORE)
-          ? status.ACTIVE
-          : status.ARCHIVED;
-
-        vaultState.status = vaultStatus;
-      }
-      if (vaultLastDataTx) {
-        const input = this.getTagValue(vaultLastDataTx.tags, smartweaveTags.INPUT);
-        const dataTx = JSON.parse(input).data;
-        const state = await this.getNodeState(dataTx);
-        vaultState = { ...vaultState, state };
-      }
-      return vaultState;
+    if (vaultLastUpdateTx) {
+      vaultProto.updatedAt = this.getTagValue(vaultLastUpdateTx.tags, protocolTags.TIMESTAMP);
     }
-    const statusFunctionName = this.getTagValue(vaultStatusTx.tags, protocolTags.FUNCTION_NAME);
-    const vaultStatus = (statusFunctionName === functions.VAULT_CREATE || statusFunctionName === functions.VAULT_RESTORE)
-      ? status.ACTIVE
-      : status.ARCHIVED;
-
-    const input = this.getTagValue(vaultLastDataTx.tags, smartweaveTags.INPUT);
-    const functionName = this.getTagValue(vaultLastDataTx.tags, protocolTags.FUNCTION_NAME);
-    const owner = this.getTagValue(vaultCreationTx.tags, protocolTags.SIGNER_ADDRESS);
-    const dataTx = functionName === functions.VAULT_CREATE ? JSON.parse(input).data.vault : JSON.parse(input).data;
-    const state = await this.getNodeState(dataTx);
-
-    const isPublic = this.getTagValue(vaultCreationTx.tags, protocolTags.PUBLIC) === "true" ? true : false;
-
-    const vaultProto = {
-      id: this.getTagValue(vaultCreationTx.tags, smartweaveTags.CONTRACT),
-      owner: owner,
-      createdAt: this.getTagValue(vaultCreationTx.tags, protocolTags.TIMESTAMP),
-      updatedAt: this.getTagValue(vaultLastUpdateTx.tags, protocolTags.TIMESTAMP),
-      public: isPublic,
-      status: vaultStatus,
-      ...state
-    } as Vault;
-    return vaultProto;
+    const latestState = await this.getVaultState(id, txs);
+    return { ...vaultProto, ...latestState };
   };
 
   private async getNodeProto(id: string): Promise<NodeLike> {
@@ -901,6 +844,76 @@ export default class ExplorerApi extends Api {
     } as Membership;
     return membershipProto;
   };
+
+  private async getVaultStatus(id: string, txs: TxNode[]): Promise<string> {
+    const vaultStatusTx =
+      txs.find((edge: TxNode) => VAULT_STATUS_FUNCTIONS.includes(this.getTagValue(edge.tags, protocolTags.FUNCTION_NAME)))
+      || await this.transactionByObjectIdQuery(id, "vaultStatusQuery");
+    if (vaultStatusTx) {
+      const statusFunctionName = this.getTagValue(vaultStatusTx.tags, protocolTags.FUNCTION_NAME);
+      const vaultStatus = (statusFunctionName === functions.VAULT_CREATE || statusFunctionName === functions.VAULT_RESTORE)
+        ? status.ACTIVE
+        : status.ARCHIVED;
+      return vaultStatus;
+    } else {
+      return status.ACTIVE;
+    }
+  }
+
+  private async getVaultState(id: string, txs: TxNode[]): Promise<any> {
+    const vaultLastDataTx =
+      txs.find((edge: TxNode) => VAULT_DATA_FUNCTIONS.includes(this.getTagValue(edge.tags, protocolTags.FUNCTION_NAME)))
+      || await this.transactionByObjectIdQuery(id, "vaultDataQuery");
+    if (vaultLastDataTx) {
+      const input = this.getTagValue(vaultLastDataTx.tags, smartweaveTags.INPUT);
+      const functionName = this.getTagValue(vaultLastDataTx.tags, protocolTags.FUNCTION_NAME);
+      const dataTx = functionName === functions.VAULT_CREATE
+        ? JSON.parse(input).data.vault
+        : JSON.parse(input).data;
+      const state = await this.getNodeState(dataTx);
+      return state;
+    } else {
+      return {};
+    }
+  }
+
+  private async getVaultInitState(id: string, txs: TxNode[]): Promise<any> {
+    const vaultCreationTx =
+      txs.find((edge: TxNode) => this.getTagValue(edge.tags, protocolTags.FUNCTION_NAME) === functions.VAULT_CREATE)
+      || await this.transactionByObjectIdQuery(id, "vaultCreationQuery");
+    if (!vaultCreationTx) {
+      const vaultInitTx = (await this.client.executeQuery(migrationQueries.vaultCreationQuery, { id: id })).items[0];
+      if (!vaultInitTx) {
+        throw new NotFound("Cannot find corresponding vault transaction.");
+      }
+      const vaultInitState = await this.getNodeState(vaultInitTx.id);
+      const vaultProto = JSON.parse(Arweave.utils.b64UrlToString(vaultInitState.data)) as Vault;
+      const dataTx = vaultProto.data[vaultProto.data.length - 1];
+      const state = await this.getNodeState(dataTx);
+      let vaultState = { ...vaultProto, ...state, id: id };
+      const vaultContext = {
+        __public__: vaultState.public,
+        __cacheOnly__: false,
+        __keys__: [] as EncryptedKeys[],
+        __publicKey__: null as any,
+        __vault__: vaultState
+      };
+      if (!vaultState.public) {
+        const membership = this.getCurrentMember(vaultState.memberships);
+        const state = await this.getNodeState(this.getDataTx(membership));
+        vaultContext.__keys__ = state?.keys;
+      }
+      return vaultContext;
+    } else {
+      return {
+        id: this.getTagValue(vaultCreationTx.tags, smartweaveTags.CONTRACT),
+        owner: this.getTagValue(vaultCreationTx.tags, protocolTags.SIGNER_ADDRESS),
+        createdAt: this.getTagValue(vaultCreationTx.tags, protocolTags.TIMESTAMP),
+        updatedAt: this.getTagValue(vaultCreationTx.tags, protocolTags.TIMESTAMP),
+        public: this.getTagValue(vaultCreationTx.tags, protocolTags.PUBLIC) === "true" ? true : false
+      }
+    }
+  }
 
   private processTags(tags: string[]): string[] {
     const processedTags = [] as string[];
