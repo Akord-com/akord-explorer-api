@@ -770,7 +770,7 @@ export default class ExplorerApi extends Api {
 
     const vaultProto = await this.getVaultInitState(id, txs) as Vault;
 
-    vaultProto.status = await this.getVaultStatus(id, txs);
+    vaultProto.status = await this.getVaultStatus(id, txs, vaultProto.status);
 
     const vaultLastUpdateTx = txs[0];
     if (vaultLastUpdateTx) {
@@ -863,7 +863,7 @@ export default class ExplorerApi extends Api {
     return membershipProto;
   };
 
-  private async getVaultStatus(id: string, txs: TxNode[]): Promise<string> {
+  private async getVaultStatus(id: string, txs: TxNode[], initialStatus?: string): Promise<string> {
     const vaultStatusTx =
       txs.find((edge: TxNode) => VAULT_STATUS_FUNCTIONS.includes(this.getTagValue(edge.tags, protocolTags.FUNCTION_NAME)))
       || await this.transactionByObjectIdQuery(id, "vaultStatusQuery");
@@ -874,7 +874,7 @@ export default class ExplorerApi extends Api {
         : status.ARCHIVED;
       return vaultStatus;
     } else {
-      return status.ACTIVE;
+      return initialStatus || status.ACTIVE;
     }
   }
 
