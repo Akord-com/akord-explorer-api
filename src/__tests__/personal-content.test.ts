@@ -23,6 +23,14 @@ describe("Testing explorer api queries", () => {
   it("should list vaults", async () => {
     const vaults = await akord.vault.listAll();
     expect(vaults.length).toBeTruthy();
+    for (let vault of vaults) {
+      expect(vault.id).toBeTruthy();
+      expect(vault.owner).toBeTruthy();
+      expect(vault.name).toBeTruthy();
+      expect(vault.createdAt).toBeTruthy();
+      expect(vault.updatedAt).toBeTruthy();
+      expect(vault.status).toEqual("ACTIVE");
+    }
   });
 
   it("should get private vault", async () => {

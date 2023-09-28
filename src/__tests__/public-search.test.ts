@@ -20,6 +20,14 @@ describe("Testing explorer api queries", () => {
       maxCreatedAt: new Date(1686761223844)
     });
     console.log(vaults);
+    for (let vault of vaults) {
+      expect(vault.id).toBeTruthy();
+      expect(vault.owner).toBeTruthy();
+      expect(vault.name).toBeTruthy();
+      expect(vault.createdAt).toBeTruthy();
+      expect(vault.updatedAt).toBeTruthy();
+      expect(vault.status).toEqual("ACTIVE");
+    }
   });
 
   it("should list public folders with pagination", async () => {
