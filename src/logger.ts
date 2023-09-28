@@ -6,4 +6,10 @@ export class Logger {
       console.debug(message);
     }
   };
+
+  static warn = (message: any) => {
+    if (this.debug) {
+      console.warn(message);
+    }
+  };
 }
